@@ -283,6 +283,7 @@ public class AsyncOrchestratorPodProcess implements KubePod {
     final var mainContainer = new ContainerBuilder()
         .withName(KubePodProcess.MAIN_CONTAINER_NAME)
         .withImage(containerOrchestratorImage)
+        .withImagePullPolicy("Always")
         .withResources(KubePodProcess.getResourceRequirementsBuilder(resourceRequirements).build())
         .withEnv(envVars)
         .withPorts(containerPorts)
