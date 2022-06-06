@@ -7,9 +7,11 @@ package io.airbyte.container_orchestrator;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.Configs;
 import io.airbyte.config.ReplicationOutput;
+import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.StandardSyncInput;
 import io.airbyte.scheduler.models.IntegrationLauncherConfig;
 import io.airbyte.scheduler.models.JobRunConfig;
+import io.airbyte.scheduler.persistence.ResourceRequirementsUtils;
 import io.airbyte.workers.RecordSchemaValidator;
 import io.airbyte.workers.WorkerConfigs;
 import io.airbyte.workers.WorkerConstants;
@@ -68,20 +70,26 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<StandardSyncI
         IntegrationLauncherConfig.class);
 
     log.info("Setting up source launcher...");
+    ResourceRequirements sourceReqs = ResourceRequirementsUtils.getResourceRequirements(syncInput.getResourceRequirements(),
+        syncInput.getSourceResourceRequirements());
+
     final IntegrationLauncher sourceLauncher = new AirbyteIntegrationLauncher(
         sourceLauncherConfig.getJobId(),
         Math.toIntExact(sourceLauncherConfig.getAttemptId()),
         sourceLauncherConfig.getDockerImage(),
         processFactory,
-        syncInput.getSourceResourceRequirements());
+        sourceReqs);
 
     log.info("Setting up destination launcher...");
+    ResourceRequirements destReqs = ResourceRequirementsUtils.getResourceRequirements(syncInput.getResourceRequirements(),
+        syncInput.getDestinationResourceRequirements());
+    log.info("using resource requirements: " + destReqs);
     final IntegrationLauncher destinationLauncher = new AirbyteIntegrationLauncher(
         destinationLauncherConfig.getJobId(),
         Math.toIntExact(destinationLauncherConfig.getAttemptId()),
         destinationLauncherConfig.getDockerImage(),
         processFactory,
-        syncInput.getDestinationResourceRequirements());
+        destReqs);
 
     log.info("Setting up source...");
     // reset jobs use an empty source to induce resetting all data in destination.
