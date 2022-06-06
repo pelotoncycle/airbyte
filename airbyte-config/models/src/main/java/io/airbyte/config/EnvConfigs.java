@@ -102,6 +102,8 @@ public class EnvConfigs implements Configs {
   private static final String DD_AGENT_HOST = "DD_AGENT_HOST";
   private static final String DD_DOGSTATSD_PORT = "DD_DOGSTATSD_PORT";
 
+  private static final String DD_DOGSTATSD_NAMESPACE_PREFIX = "DD_DOGSTATSD_NAMESPACE_PREFIX";
+
   public static final String STATE_STORAGE_S3_BUCKET_NAME = "STATE_STORAGE_S3_BUCKET_NAME";
   public static final String STATE_STORAGE_S3_REGION = "STATE_STORAGE_S3_REGION";
   public static final String STATE_STORAGE_S3_ACCESS_KEY = "STATE_STORAGE_S3_ACCESS_KEY";
@@ -732,6 +734,11 @@ public class EnvConfigs implements Configs {
   @Override
   public String getDDDogStatsDPort() {
     return getEnvOrDefault(DD_DOGSTATSD_PORT, "");
+  }
+
+  @Override
+  public String getDDDogstatsdNamespacePrefix() {
+    return getEnvOrDefault(DD_DOGSTATSD_NAMESPACE_PREFIX, "");
   }
 
   @Override
