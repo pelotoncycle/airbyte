@@ -16,11 +16,13 @@ public class DatadogClientConfiguration {
   public final String ddAgentHost;
   public final String ddPort;
   public final boolean publish;
+  public final String namespacePrefix;
 
   public DatadogClientConfiguration(final Configs configs) {
     this.ddAgentHost = configs.getDDAgentHost();
     this.ddPort = configs.getDDDogStatsDPort();
     this.publish = configs.getPublishMetrics();
+    this.namespacePrefix = configs.getDDNamespacePrefix();
   }
 
 }

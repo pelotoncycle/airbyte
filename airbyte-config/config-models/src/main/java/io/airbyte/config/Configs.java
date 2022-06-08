@@ -405,6 +405,12 @@ public interface Configs {
   String getDDDogStatsDPort();
 
   /**
+   * Set the namespace prefix for metrics i.e. airbyte.dev. to separate metrics for Airbyte internal
+   * use.
+   */
+  String getDDNamespacePrefix();
+
+  /**
    * Define whether to publish tracking events to Segment or log-only. Airbyte internal use.
    */
   TrackingStrategy getTrackingStrategy();

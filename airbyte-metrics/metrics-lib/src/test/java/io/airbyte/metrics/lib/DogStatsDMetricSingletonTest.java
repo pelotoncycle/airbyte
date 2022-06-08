@@ -20,7 +20,7 @@ public class DogStatsDMetricSingletonTest {
   @DisplayName("there should be no exception if we attempt to emit metrics while publish is false")
   public void testPublishTrueNoEmitError() {
     Assertions.assertDoesNotThrow(() -> {
-      DogStatsDMetricSingleton.initialize(MetricEmittingApps.WORKER, new DatadogClientConfiguration("localhost", "1000", false));
+      DogStatsDMetricSingleton.initialize(MetricEmittingApps.WORKER, new DatadogClientConfiguration("localhost", "1000", false, ""));
       DogStatsDMetricSingleton.gauge(OssMetricsRegistry.KUBE_POD_PROCESS_CREATE_TIME_MILLISECS, 1);
     });
   }
@@ -29,7 +29,7 @@ public class DogStatsDMetricSingletonTest {
   @DisplayName("there should be no exception if we attempt to emit metrics while publish is true")
   public void testPublishFalseNoEmitError() {
     Assertions.assertDoesNotThrow(() -> {
-      DogStatsDMetricSingleton.initialize(MetricEmittingApps.WORKER, new DatadogClientConfiguration("localhost", "1000", true));
+      DogStatsDMetricSingleton.initialize(MetricEmittingApps.WORKER, new DatadogClientConfiguration("localhost", "1000", true, ""));
       DogStatsDMetricSingleton.gauge(OssMetricsRegistry.KUBE_POD_PROCESS_CREATE_TIME_MILLISECS, 1);
     });
   }
