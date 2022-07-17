@@ -10,6 +10,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.util.Collections;
+
 public class DogStatsDMetricClientTest {
 
   DogStatsDMetricClient dogStatsDMetricClient;
@@ -17,7 +19,7 @@ public class DogStatsDMetricClientTest {
   @BeforeEach
   void setUp() {
     dogStatsDMetricClient = new DogStatsDMetricClient();
-    dogStatsDMetricClient.initialize(MetricEmittingApps.WORKER, new DatadogClientConfiguration("localhost", "1000", false));
+    dogStatsDMetricClient.initialize(MetricEmittingApps.WORKER, new DatadogClientConfiguration("localhost", "1000", false, Collections.emptyList()));
   }
 
   @AfterEach

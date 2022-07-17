@@ -462,6 +462,12 @@ public interface Configs {
   String getDDDogStatsDPort();
 
   /**
+   * Set the constant tags to send along with all metrics sent to DataDog. This is useful for separating
+   * ouy different instances of Airbyte.
+   */
+  List<String> getDDConstantTags();
+
+  /**
    * Define whether to publish tracking events to Segment or log-only. Airbyte internal use.
    */
   TrackingStrategy getTrackingStrategy();
