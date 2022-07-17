@@ -8,9 +8,11 @@ import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.Configs;
 import io.airbyte.config.ReplicationOutput;
+import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.StandardSyncInput;
 import io.airbyte.scheduler.models.IntegrationLauncherConfig;
 import io.airbyte.scheduler.models.JobRunConfig;
+import io.airbyte.scheduler.persistence.ResourceRequirementsUtils;
 import io.airbyte.workers.RecordSchemaValidator;
 import io.airbyte.workers.WorkerConfigs;
 import io.airbyte.workers.WorkerConstants;
@@ -74,20 +76,24 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<StandardSyncI
         IntegrationLauncherConfig.class);
 
     log.info("Setting up source launcher...");
+    final ResourceRequirements sourceResourceRequirements =ResourceRequirementsUtils.getResourceRequirements(syncInput.getSourceResourceRequirements(),
+                                                                                                             workerConfigs.getResourceRequirements());
     final IntegrationLauncher sourceLauncher = new AirbyteIntegrationLauncher(
         sourceLauncherConfig.getJobId(),
         Math.toIntExact(sourceLauncherConfig.getAttemptId()),
         sourceLauncherConfig.getDockerImage(),
         processFactory,
-        syncInput.getSourceResourceRequirements());
+        sourceResourceRequirements);
 
     log.info("Setting up destination launcher...");
+    final ResourceRequirements destinationResourceRequirements =ResourceRequirementsUtils.getResourceRequirements(syncInput.getDestinationResourceRequirements(),
+            workerConfigs.getResourceRequirements());
     final IntegrationLauncher destinationLauncher = new AirbyteIntegrationLauncher(
         destinationLauncherConfig.getJobId(),
         Math.toIntExact(destinationLauncherConfig.getAttemptId()),
         destinationLauncherConfig.getDockerImage(),
         processFactory,
-        syncInput.getDestinationResourceRequirements());
+        destinationResourceRequirements);
 
     log.info("Setting up source...");
     // reset jobs use an empty source to induce resetting all data in destination.
