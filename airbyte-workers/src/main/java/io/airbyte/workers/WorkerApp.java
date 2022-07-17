@@ -345,7 +345,8 @@ public class WorkerApp {
                                                    String secretName,
                                                    String secretMountPath,
                                                    String containerOrchestratorImage,
-                                                   String googleApplicationCredentials) {}
+                                                   String googleApplicationCredentials,
+                                                   String imagePullPolicy) {}
 
   static Optional<ContainerOrchestratorConfig> getContainerOrchestratorConfig(final Configs configs) {
     if (configs.getContainerOrchestratorEnabled()) {
@@ -362,7 +363,8 @@ public class WorkerApp {
           configs.getContainerOrchestratorSecretName(),
           configs.getContainerOrchestratorSecretMountPath(),
           configs.getContainerOrchestratorImage(),
-          configs.getGoogleApplicationCredentials()));
+          configs.getGoogleApplicationCredentials(),
+          configs.getJobKubeMainContainerImagePullPolicy()));
     } else {
       return Optional.empty();
     }

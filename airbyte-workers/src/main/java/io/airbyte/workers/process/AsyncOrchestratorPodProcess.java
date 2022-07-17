@@ -243,7 +243,8 @@ public class AsyncOrchestratorPodProcess implements KubePod {
   public void create(final Map<String, String> allLabels,
                      final ResourceRequirements resourceRequirements,
                      final Map<String, String> fileMap,
-                     final Map<Integer, Integer> portMap) {
+                     final Map<Integer, Integer> portMap,
+                     final String imagePullPolicy) {
     final List<Volume> volumes = new ArrayList<>();
     final List<VolumeMount> volumeMounts = new ArrayList<>();
     final List<EnvVar> envVars = new ArrayList<>();
@@ -283,6 +284,7 @@ public class AsyncOrchestratorPodProcess implements KubePod {
     final var mainContainer = new ContainerBuilder()
         .withName(KubePodProcess.MAIN_CONTAINER_NAME)
         .withImage(containerOrchestratorImage)
+        .withImagePullPolicy(imagePullPolicy)
         .withResources(KubePodProcess.getResourceRequirementsBuilder(resourceRequirements).build())
         .withEnv(envVars)
         .withPorts(containerPorts)

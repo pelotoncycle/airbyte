@@ -121,10 +121,10 @@ public class AsyncOrchestratorPodProcessIntegrationTest {
     final Map<String, String> envMap = System.getenv().entrySet().stream()
         .filter(entry -> OrchestratorConstants.ENV_VARS_TO_TRANSFER.contains(entry.getKey()))
         .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-
-    asyncProcess.create(Map.of(), new WorkerConfigs(new EnvConfigs()).getResourceRequirements(), Map.of(
+    WorkerConfigs configs = new WorkerConfigs(new EnvConfigs());
+    asyncProcess.create(Map.of(), configs.getResourceRequirements(), Map.of(
         OrchestratorConstants.INIT_FILE_APPLICATION, AsyncOrchestratorPodProcess.NO_OP,
-        OrchestratorConstants.INIT_FILE_ENV_MAP, Jsons.serialize(envMap)), portMap);
+        OrchestratorConstants.INIT_FILE_ENV_MAP, Jsons.serialize(envMap)), portMap, configs.getJobImagePullPolicy());
 
     // a final activity waits until there is output from the kube pod process
     asyncProcess.waitFor(10, TimeUnit.SECONDS);

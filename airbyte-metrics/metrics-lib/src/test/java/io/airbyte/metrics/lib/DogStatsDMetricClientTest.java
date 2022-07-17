@@ -4,13 +4,12 @@
 
 package io.airbyte.metrics.lib;
 
+import java.util.Collections;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-
-import java.util.Collections;
 
 public class DogStatsDMetricClientTest {
 

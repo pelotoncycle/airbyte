@@ -462,8 +462,8 @@ public interface Configs {
   String getDDDogStatsDPort();
 
   /**
-   * Set the constant tags to send along with all metrics sent to DataDog. This is useful for separating
-   * ouy different instances of Airbyte.
+   * Set the constant tags to send along with all metrics sent to DataDog. This is useful for
+   * separating ouy different instances of Airbyte.
    */
   List<String> getDDConstantTags();
 

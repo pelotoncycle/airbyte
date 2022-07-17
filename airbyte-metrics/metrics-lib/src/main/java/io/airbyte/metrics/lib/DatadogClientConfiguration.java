@@ -5,9 +5,8 @@
 package io.airbyte.metrics.lib;
 
 import io.airbyte.config.Configs;
-import lombok.AllArgsConstructor;
-
 import java.util.List;
+import lombok.AllArgsConstructor;
 
 /**
  * POJO of configuration required for publishing metrics.

@@ -43,7 +43,7 @@ public class DogStatsDMetricClient implements MetricClient {
 
     log.info("Starting DogStatsD client..");
     instancePublish = config.publish;
-    String[] constantTags =  config.constantTags.toArray(new String[0]);
+    String[] constantTags = config.constantTags.toArray(new String[0]);
     statsDClient = new NonBlockingStatsDClientBuilder()
         .prefix(app.getApplicationName())
         .hostname(config.ddAgentHost)

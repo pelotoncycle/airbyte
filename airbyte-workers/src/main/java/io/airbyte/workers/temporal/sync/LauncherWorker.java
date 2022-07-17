@@ -143,7 +143,8 @@ public class LauncherWorker<INPUT, OUTPUT> implements Worker<INPUT, OUTPUT> {
                 allLabels,
                 resourceRequirements,
                 fileMap,
-                portMap);
+                portMap,
+                containerOrchestratorConfig.imagePullPolicy());
           } catch (final KubernetesClientException e) {
             throw new WorkerException(
                 "Failed to create pod " + podName + ", pre-existing pod exists which didn't advance out of the NOT_STARTED state.");

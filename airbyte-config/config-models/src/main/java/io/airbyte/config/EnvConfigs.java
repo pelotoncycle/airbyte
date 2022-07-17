@@ -797,11 +797,11 @@ public class EnvConfigs implements Configs {
 
   @Override
   public List<String> getDDConstantTags() {
-    String tagString = getEnvOrDefault(DD_CONSTANT_TAGS,"");
+    String tagString = getEnvOrDefault(DD_CONSTANT_TAGS, "");
     return Splitter.on(",")
-            .splitToStream(tagString)
-            .map(String::strip)
-            .collect(Collectors.toList());
+        .splitToStream(tagString)
+        .map(String::strip)
+        .collect(Collectors.toList());
   }
 
   @Override

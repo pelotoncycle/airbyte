@@ -10,8 +10,6 @@ import com.timgroup.statsd.StatsDClient;
 import io.airbyte.config.Configs;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.List;
-
 /**
  * Light wrapper around the DogsStatsD client to make using the client slightly more ergonomic.
  * <p>
@@ -44,7 +42,7 @@ public class DogStatsDMetricSingleton {
 
     log.info("Starting DogStatsD client..");
     instancePublish = config.publish;
-    String[] constantTags =  config.constantTags.toArray(new String[0]);
+    String[] constantTags = config.constantTags.toArray(new String[0]);
     statsDClient = new NonBlockingStatsDClientBuilder()
         .prefix(app.getApplicationName())
         .hostname(config.ddAgentHost)
