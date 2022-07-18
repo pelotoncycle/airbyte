@@ -76,8 +76,9 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<StandardSyncI
         IntegrationLauncherConfig.class);
 
     log.info("Setting up source launcher...");
-    final ResourceRequirements sourceResourceRequirements =ResourceRequirementsUtils.getResourceRequirements(syncInput.getSourceResourceRequirements(),
-                                                                                                             workerConfigs.getResourceRequirements());
+    final ResourceRequirements sourceResourceRequirements =
+        ResourceRequirementsUtils.getResourceRequirements(syncInput.getSourceResourceRequirements(),
+            workerConfigs.getResourceRequirements());
     final IntegrationLauncher sourceLauncher = new AirbyteIntegrationLauncher(
         sourceLauncherConfig.getJobId(),
         Math.toIntExact(sourceLauncherConfig.getAttemptId()),
@@ -86,7 +87,8 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<StandardSyncI
         sourceResourceRequirements);
 
     log.info("Setting up destination launcher...");
-    final ResourceRequirements destinationResourceRequirements =ResourceRequirementsUtils.getResourceRequirements(syncInput.getDestinationResourceRequirements(),
+    final ResourceRequirements destinationResourceRequirements =
+        ResourceRequirementsUtils.getResourceRequirements(syncInput.getDestinationResourceRequirements(),
             workerConfigs.getResourceRequirements());
     final IntegrationLauncher destinationLauncher = new AirbyteIntegrationLauncher(
         destinationLauncherConfig.getJobId(),
