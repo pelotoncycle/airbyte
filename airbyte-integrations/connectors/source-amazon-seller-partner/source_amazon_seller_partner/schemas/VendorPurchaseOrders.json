@@ -1,0 +1,195 @@
+{
+  "title": "VendorPurchaseOrders",
+  "description": "All vendor purchase orders orders that were updated after a specified date",
+  "type": "object",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "properties": {
+    "purchaseOrderNumber": {
+      "type": ["null", "string"]
+    },
+    "purchaseOrderState": {
+      "type": ["null", "string"]
+    },
+    "orderDetails": {
+      "type": ["null", "object"],
+      "properties": {
+        "purchaseOrderDate": {
+          "type": ["null", "string"]
+        },
+        "purchaseOrderChangedDate": {
+          "type": ["null", "string"]
+        },
+        "purchaseOrderStateChangedDate": {
+          "type": ["null", "string"]
+        },
+        "purchaseOrderType": {
+          "type": ["null", "string"]
+        },
+        "importDetails": {
+          "type": ["null", "object"],
+          "properties": {
+            "methodOfPayment": {"type": ["null", "string"]},
+            "internationalCommercialTerms": {"type":  ["null", "string"]},
+            "portOfDelivery": {"type":  ["null", "string"]},
+            "importContainers": {"type": ["null", "string"]},
+            "shippingInstructions": {"type": ["null", "string"]}
+          }
+        },
+        "dealCode": {"type": ["null", "string"]},
+        "paymentMethod": {
+          "type": ["null", "string"]
+        },
+        "buyingParty": {
+          "type": ["null", "object"],
+          "properties": {
+            "partyId": {"type":  ["null","string"]},
+            "address": {
+              "type":  ["null", "object"],
+              "properties": {
+                "name": {"type": ["null","string"]},
+                "addressLine1": {"type": ["null","string"]},
+                "addressLine2": {"type": ["null","string"]},
+                "addressLine3": {"type": ["null","string"]},
+                "city": {"type": ["null","string"]},
+                "country": {"type": ["null","string"]},
+                "district": {"type": ["null","string"]},
+                "stateOrRegion": {"type": ["null","string"]},
+                "postalCode": {"type": ["null","string"]},
+                "countryCode": {"type": ["null","string"]},
+                "phone": {"type": ["null","string"]}
+              }
+            },
+            "taxInfo": {
+              "type": ["null", "object"],
+              "properties": {
+                "taxRegistrationType": {"type": ["null","string"]},
+                "taxRegistrationNumber": {"type": ["null","string"]}
+              }
+            }
+          }
+        },
+        "sellingParty": {
+          "type": ["null", "object"],
+          "properties": {
+            "partyId": {"type":  ["null","string"]},
+            "address": {
+              "type":  ["null", "object"],
+              "properties": {
+                "name": {"type": ["null","string"]},
+                "addressLine1": {"type": ["null","string"]},
+                "addressLine2": {"type": ["null","string"]},
+                "addressLine3": {"type": ["null","string"]},
+                "city": {"type": ["null","string"]},
+                "country": {"type": ["null","string"]},
+                "district": {"type": ["null","string"]},
+                "stateOrRegion": {"type": ["null","string"]},
+                "postalCode": {"type": ["null","string"]},
+                "countryCode": {"type": ["null","string"]},
+                "phone": {"type": ["null","string"]}
+              }
+            },
+            "taxInfo": {
+              "type": ["null", "object"],
+              "properties": {
+                "taxRegistrationType": {"type": ["null","string"]},
+                "taxRegistrationNumber": {"type": ["null","string"]}
+              }
+            }
+          }
+        },
+        "shipToParty": {
+          "type": ["null", "object"],
+          "properties": {
+            "partyId": {"type":  ["null","string"]},
+            "address": {
+              "type":  ["null", "object"],
+              "properties": {
+                "name": {"type": ["null","string"]},
+                "addressLine1": {"type": ["null","string"]},
+                "addressLine2": {"type": ["null","string"]},
+                "addressLine3": {"type": ["null","string"]},
+                "city": {"type": ["null","string"]},
+                "country": {"type": ["null","string"]},
+                "district": {"type": ["null","string"]},
+                "stateOrRegion": {"type": ["null","string"]},
+                "postalCode": {"type": ["null","string"]},
+                "countryCode": {"type": ["null","string"]},
+                "phone": {"type": ["null","string"]}
+              }
+            },
+            "taxInfo": {
+              "type": ["null", "object"],
+              "properties": {
+                "taxRegistrationType": {"type": ["null","string"]},
+                "taxRegistrationNumber": {"type": ["null","string"]}
+              }
+            }
+          }
+        },
+        "billToParty": {
+          "type": ["null", "object"],
+          "properties": {
+            "partyId": {"type":  ["null","string"]},
+            "address": {
+              "type":  ["null", "object"],
+              "properties": {
+                "name": {"type": ["null","string"]},
+                "addressLine1": {"type": ["null","string"]},
+                "addressLine2": {"type": ["null","string"]},
+                "addressLine3": {"type": ["null","string"]},
+                "city": {"type": ["null","string"]},
+                "country": {"type": ["null","string"]},
+                "district": {"type": ["null","string"]},
+                "stateOrRegion": {"type": ["null","string"]},
+                "postalCode": {"type": ["null","string"]},
+                "countryCode": {"type": ["null","string"]},
+                "phone": {"type": ["null","string"]}
+              }
+            },
+            "taxInfo": {
+              "type": ["null", "object"],
+              "properties": {
+                "taxRegistrationType": {"type": ["null","string"]},
+                "taxRegistrationNumber": {"type": ["null","string"]}
+              }
+            }
+          }
+        },
+        "shipWindow": {"type": ["null","string"]},
+        "items": {
+          "type": ["null", "array"],
+          "items":  {
+            "type": ["null", "object"],
+            "properties": {
+              "itemSequenceNumber": {"type": ["null", "string"]},
+              "amazonProductIdentifier": {"type": ["null", "string"]},
+              "vendorProductIdentifier": {"type": ["null", "string"]},
+              "orderedQuantity": {
+                "type": ["null", "object"],
+                "properties": {
+                  "amount": {"type": ["null","number"]},
+                  "unitOfMeasure": {"type":  ["null", "string"]},
+                  "unitSize": {"type":  ["null", "number"]}
+                }},
+                "isBackOrderAllowed": {"type":  ["null", "boolean"]},
+                "netCost": {
+                  "type": ["null", "object"],
+                  "properties": {
+                    "currencyCode": {"type":  ["null", "string"]},
+                    "amount": {"type": ["null","string"]}
+                  }
+                },
+              "listPrice": {
+                "type": ["null", "object"],
+                "properties": {
+                  "currencyCode": {"type":  ["null", "string"]},
+                  "amount": {"type": ["null","string"]}
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

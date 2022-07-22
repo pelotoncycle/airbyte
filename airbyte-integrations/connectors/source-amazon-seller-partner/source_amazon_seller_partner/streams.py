@@ -700,6 +700,101 @@ class Orders(IncrementalAmazonSPStream):
             return self.default_backoff_time
 
 
+class VendorPurchaseOrders(IncrementalAmazonSPStream):
+    """
+    API model:
+    """
+
+    name = "VendorPurchaseOrders"
+    primary_key = "purchaseOrderNumber"
+    replication_start_date_field = "changedAfter"
+    replication_end_date_field = "changedBefore"
+    next_page_token_field = "nextToken"
+    page_size_field = "limit"
+    time_format = "%Y-%m-%dT%H:%M:%SZ"
+    default_backoff_time = 60
+    default_cursor_field = None
+    cursor_field = ["orderDetails.purchaseOrderDate", "orderDetails.purchaseOrderChangedDate"]
+    time_increment = {"days": 6, "hours": 23, "minutes": 59, "seconds": 59}
+    time_skip = {"seconds": 1}
+
+    def path(self, **kwargs) -> str:
+        return f"vendor/orders/{VENDORS_API_VERSION}/purchaseOrders"
+
+    def stream_slices(
+        self, *, sync_mode: SyncMode, cursor_field: List[str] = None, stream_state: Mapping[str, Any] = None
+    ) -> Iterable[Optional[Mapping[str, Any]]]:
+        slices = []
+        state_stream = stream_state or {}
+        for cursor_field in self.cursor_field:
+            start_date = (
+                pendulum.parse(state_stream.get(cursor_field))
+                if (stream_state and cursor_field in stream_state)
+                else pendulum.parse(self._replication_start_date)
+            )
+            end_date = pendulum.parse(self._replication_end_date) if self._replication_end_date else pendulum.now("utc")
+            is_modified_stream = not cursor_field.endswith("purchaseOrderDate")
+            while start_date <= end_date:
+                current_end = start_date.add(**self.time_increment)
+                if is_modified_stream:
+                    slices.append(
+                        {
+                            "isPOChanged": str(is_modified_stream).lower(),
+                            "changedAfter": start_date.strftime(self.time_format),
+                            "changedBefore": current_end.strftime(self.time_format),
+                        }
+                    )
+                else:
+                    slices.append(
+                        {
+                            "isPOChanged": str(is_modified_stream).lower(),
+                            "createdAfter": start_date.strftime(self.time_format),
+                            "createdBefore": current_end.strftime(self.time_format),
+                        }
+                    )
+                start_date = current_end.add(**self.time_skip)
+        return slices
+
+    def request_params(
+        self, stream_state: Mapping[str, Any], stream_slice: Mapping[str, Any] = None, next_page_token: Mapping[str, Any] = None, **kwargs
+    ) -> MutableMapping[str, Any]:
+        if next_page_token:
+            return dict(next_page_token)
+        else:
+            params = {"MarketplaceIds": self.marketplace_id}
+            params.update(stream_slice)
+            return params
+
+    def parse_response(self, response: requests.Response, stream_state: Mapping[str, Any], **kwargs) -> Iterable[Mapping]:
+        yield from response.json().get(self.data_field, {}).get("orders", [])
+
+    def backoff_time(self, response: requests.Response) -> Optional[float]:
+        rate_limit = response.headers.get("x-amzn-RateLimit-Limit", 0)
+        if rate_limit:
+            return 1 / float(rate_limit)
+        else:
+            return self.default_backoff_time
+
+    def get_updated_state(self, current_stream_state: MutableMapping[str, Any], latest_record: Mapping[str, Any]) -> Mapping[str, Any]:
+        """
+        Return the latest state by comparing the cursor value in the latest record with the stream's most recent state object
+        and returning an updated state object.
+        """
+        new_state = {}
+
+        for v in self.cursor_field:
+            old_bookmark = (
+                pendulum.parse(current_stream_state.get(v)) if v in current_stream_state else pendulum.parse(self._replication_start_date)
+            )
+            parent_key, value_key = v.split(".")
+            current_bookmark = (
+                pendulum.parse(latest_record[parent_key].get(value_key)) if value_key in latest_record[parent_key] else old_bookmark
+            )
+            new_bookmark = max(current_bookmark, old_bookmark)
+            new_state[v] = new_bookmark.strftime(self.time_format)
+        return new_state
+
+
 class VendorDirectFulfillmentShipping(AmazonSPStream):
     """
     API docs: https://github.com/amzn/selling-partner-api-docs/blob/main/references/vendor-direct-fulfillment-shipping-api/vendorDirectFulfillmentShippingV1.md
