@@ -99,6 +99,7 @@ public class EnvConfigs implements Configs {
   private static final String CONTAINER_ORCHESTRATOR_IMAGE = "CONTAINER_ORCHESTRATOR_IMAGE";
   private static final String DD_AGENT_HOST = "DD_AGENT_HOST";
   private static final String DD_DOGSTATSD_PORT = "DD_DOGSTATSD_PORT";
+  private static final String DD_CONSTANT_TAGS = "DD_CONSTANT_TAGS";
 
   public static final String STATE_STORAGE_S3_BUCKET_NAME = "STATE_STORAGE_S3_BUCKET_NAME";
   public static final String STATE_STORAGE_S3_REGION = "STATE_STORAGE_S3_REGION";
@@ -791,6 +792,14 @@ public class EnvConfigs implements Configs {
     return getEnvOrDefault(DD_AGENT_HOST, "");
   }
 
+  @Override
+  public List<String> getDDConstantTags() {
+    String constantTagsString = getEnvOrDefault(DD_CONSTANT_TAGS, "");
+    return Splitter.on(",")
+            .splitToStream(constantTagsString)
+            .filter(s -> !s.strip().isBlank() )
+            .collect(Collectors.toList());
+  }
   @Override
   public String getDDDogStatsDPort() {
     return getEnvOrDefault(DD_DOGSTATSD_PORT, "");

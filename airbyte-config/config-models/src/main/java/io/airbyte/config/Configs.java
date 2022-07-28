@@ -462,6 +462,12 @@ public interface Configs {
   String getDDDogStatsDPort();
 
   /**
+   *  Get tags to be applied to all metrics. Useful for separating metrics for different instances / environments.
+   *  Example: airbyte_instance:dev,k9s-cluster:dev
+   */
+  List<String> getDDConstantTags();
+
+  /**
    * Define whether to publish tracking events to Segment or log-only. Airbyte internal use.
    */
   TrackingStrategy getTrackingStrategy();
