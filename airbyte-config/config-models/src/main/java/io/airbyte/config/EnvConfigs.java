@@ -796,10 +796,11 @@ public class EnvConfigs implements Configs {
   public List<String> getDDConstantTags() {
     String constantTagsString = getEnvOrDefault(DD_CONSTANT_TAGS, "");
     return Splitter.on(",")
-            .splitToStream(constantTagsString)
-            .filter(s -> !s.strip().isBlank() )
-            .collect(Collectors.toList());
+        .splitToStream(constantTagsString)
+        .filter(s -> !s.strip().isBlank())
+        .collect(Collectors.toList());
   }
+
   @Override
   public String getDDDogStatsDPort() {
     return getEnvOrDefault(DD_DOGSTATSD_PORT, "");

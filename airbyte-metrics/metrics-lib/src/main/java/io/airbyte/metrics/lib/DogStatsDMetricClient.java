@@ -40,12 +40,12 @@ public class DogStatsDMetricClient implements MetricClient {
       // do nothing if we do not want to publish. All metrics methods also do nothing.
       return;
     }
-
     log.info("Starting DogStatsD client..");
     instancePublish = config.publish;
     statsDClient = new NonBlockingStatsDClientBuilder()
         .prefix(app.getApplicationName())
         .hostname(config.ddAgentHost)
+        .constantTags(config.constantTags.toArray(new String[0]))
         .port(Integer.parseInt(config.ddPort))
         .build();
   }

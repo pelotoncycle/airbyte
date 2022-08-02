@@ -462,8 +462,8 @@ public interface Configs {
   String getDDDogStatsDPort();
 
   /**
-   *  Get tags to be applied to all metrics. Useful for separating metrics for different instances / environments.
-   *  Example: airbyte_instance:dev,k9s-cluster:dev
+   * Get tags to be applied to all metrics. Useful for separating metrics for different instances /
+   * environments. Example: airbyte_instance:dev,k9s-cluster:dev
    */
   List<String> getDDConstantTags();
 
