@@ -1,0 +1,56 @@
+{
+  "title": "Vendor Inventory Report",
+  "description": "Vendor inventory report",
+  "type": "object",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "properties": {
+    "startDate":  {"type": ["null", "string"]},
+    "endDate": {"type": ["null", "string"]},
+    "asin": {"type": ["null", "string"]},
+    "openPurchaseOrderUnits": {"type": ["null", "number"]},
+    "averageVendorLeadTimeDays" : {"type":  ["null", "number"]},
+    "sellThroughRate": {"type":  ["null", "number"]},
+    "unfilledCustomerOrderedUnits": {"type": ["null", "number"]},
+    "netReceivedInventoryCost": {
+      "type": ["null", "object"],
+      "properties": {
+        "currencyCode": {"type":  ["null", "string"]},
+        "amount": {"type": ["null","number"]}
+      }
+    },
+    "netReceivedInventoryUnits": {"type": ["null", "number"]},
+    "sellableOnHandInventoryCost": {
+      "type": ["null", "object"],
+      "properties": {
+        "currencyCode": {"type":  ["null", "string"]},
+        "amount": {"type": ["null","number"]}
+      }
+    },
+    "sellableOnHandInventoryUnits": {"type": ["null", "number"]},
+    "unsellableOnHandInventoryCost": {
+      "type": ["null", "object"],
+      "properties": {
+        "currencyCode": {"type":  ["null", "string"]},
+        "amount": {"type": ["null","number"]}
+      }
+    },
+    "unsellableOnHandInventoryUnits": {"type": ["null", "number"]},
+    "aged90PlusDaysSellableInventoryCost": {
+      "type": ["null", "object"],
+      "properties": {
+        "currencyCode": {"type":  ["null", "string"]},
+        "amount": {"type": ["null","number"]}
+      }
+    },
+    "aged90PlusDaysSellableInventoryUnits": {"type": ["null", "number"]},
+    "unhealthyInventoryCost": {
+      "type": ["null", "object"],
+      "properties": {
+        "currencyCode": {"type":  ["null", "string"]},
+        "amount": {"type": ["null","number"]}
+      }
+    },
+    "unhealthyInventoryUnits": {"type": ["null", "number"]}
+  }
+}
+

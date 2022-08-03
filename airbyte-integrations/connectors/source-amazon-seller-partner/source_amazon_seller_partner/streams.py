@@ -262,6 +262,7 @@ class ReportsAmazonSPStream(Stream, ABC):
     ) -> Mapping[str, Any]:
         request_headers = self.request_headers()
         report_data = self._report_data(sync_mode, cursor_field, stream_slice, stream_state)
+        print(f"got report data {report_data}")
         create_report_request = self._create_prepared_request(
             http_method="POST",
             path=f"{self.path_prefix}/reports",
@@ -301,7 +302,7 @@ class ReportsAmazonSPStream(Stream, ABC):
             return decrypted.decode("iso-8859-1")
         raise Exception([{"message": "Only AES decryption is implemented."}])
 
-    def parse_response(self, response: requests.Response) -> Iterable[Mapping]:
+    def _get_document_from_response(self, response: requests.Response):
         payload = response.json().get(self.data_field, {})
         document = self.decrypt_report_document(
             payload.get("url"),
@@ -310,7 +311,15 @@ class ReportsAmazonSPStream(Stream, ABC):
             payload.get("encryptionDetails", {}).get("standard"),
             payload,
         )
+        return document
 
+    def parse_error_response(self, response: requests.Response) -> str:
+        document = self._get_document_from_response(response)
+        error = json_lib.loads(document)
+        return error["errorDetails"]
+
+    def parse_response(self, response: requests.Response) -> Iterable[Mapping]:
+        document = self._get_document_from_response(response)
         document_records = self.parse_document(document)
         yield from document_records
 
@@ -360,7 +369,17 @@ class ReportsAmazonSPStream(Stream, ABC):
             response = self._send_request(request)
             yield from self.parse_response(response)
         elif is_fatal:
-            raise Exception(f"The report for stream '{self.name}' was aborted due to a fatal error")
+            document_id = report_payload["reportDocumentId"]
+            request_headers = self.request_headers()
+            request = self._create_prepared_request(
+                path=self.path(document_id=document_id),
+                headers=dict(request_headers, **self.authenticator.get_auth_header()),
+                params=self.request_params(),
+            )
+            response = self._send_request(request)
+            error_response = self.parse_error_response(response)
+            logger.error(f"Got error response from REPORTING API: {error_response}")
+            raise Exception(f"The report for stream '{self.name}' was aborted due to a fatal error.")
         elif is_cancelled:
             logger.warn(f"The report for stream '{self.name}' was cancelled or there is no data to return")
         else:
@@ -385,6 +404,14 @@ class FbaInventoryReports(ReportsAmazonSPStream):
     """
 
     name = "GET_FBA_INVENTORY_AGED_DATA"
+
+
+class FbaStorageFeesReports(ReportsAmazonSPStream):
+    """
+    Field definitions: https://sellercentral.amazon.com/help/hub/reference/G202086720
+    """
+
+    name = "GET_FBA_STORAGE_FEE_CHARGES_DATA"
 
 
 class FulfilledShipmentsReports(ReportsAmazonSPStream):
@@ -462,13 +489,13 @@ class BrandAnalyticsStream(ReportsAmazonSPStream):
             return {}
         else:
             now = pendulum.now("utc")
+            daily_buffer = report_options.pop("daily_buffer_in_hours", 24)
             if report_options["reportPeriod"] == "DAY":
-                now = now.subtract(days=1)
+                now = now.subtract(hours=daily_buffer)
                 data_start_time = now.start_of("day")
                 data_end_time = now.end_of("day")
             elif report_options["reportPeriod"] == "WEEK":
                 now = now.subtract(weeks=1)
-
                 # According to report api docs
                 # dataStartTime must be a Sunday and dataEndTime must be the following Saturday
                 pendulum.week_starts_at(pendulum.SUNDAY)
@@ -521,6 +548,11 @@ class BrandAnalyticsAlternatePurchaseReports(BrandAnalyticsStream):
 class BrandAnalyticsItemComparisonReports(BrandAnalyticsStream):
     name = "GET_BRAND_ANALYTICS_ITEM_COMPARISON_REPORT"
     result_key = "dataByAsin"
+
+
+class VendorInventoryReport(BrandAnalyticsStream):
+    name = "GET_VENDOR_INVENTORY_REPORT"
+    result_key = "inventoryByAsin"
 
 
 class IncrementalReportsAmazonSPStream(ReportsAmazonSPStream):
@@ -724,6 +756,7 @@ class VendorPurchaseOrders(IncrementalAmazonSPStream):
     def stream_slices(
         self, *, sync_mode: SyncMode, cursor_field: List[str] = None, stream_state: Mapping[str, Any] = None
     ) -> Iterable[Optional[Mapping[str, Any]]]:
+
         slices = []
         state_stream = stream_state or {}
         for cursor_field in self.cursor_field:
@@ -753,7 +786,7 @@ class VendorPurchaseOrders(IncrementalAmazonSPStream):
                         }
                     )
                 start_date = current_end.add(**self.time_skip)
-        return slices
+        yield from slices
 
     def request_params(
         self, stream_state: Mapping[str, Any], stream_slice: Mapping[str, Any] = None, next_page_token: Mapping[str, Any] = None, **kwargs
@@ -925,3 +958,94 @@ class ListFinancialEvents(FinanceStream):
 
     def parse_response(self, response: requests.Response, stream_state: Mapping[str, Any], **kwargs) -> Iterable[Mapping]:
         yield from [response.json().get(self.data_field, {}).get("FinancialEvents", {})]
+
+
+class FbaCustomerReturnsReports(ReportsAmazonSPStream):
+
+    name = "GET_FBA_FULFILLMENT_CUSTOMER_RETURNS_DATA"
+
+    def _report_data(
+        self,
+        sync_mode: SyncMode,
+        cursor_field: List[str] = None,
+        stream_slice: Mapping[str, Any] = None,
+        stream_state: Mapping[str, Any] = None,
+    ) -> Mapping[str, Any]:
+        replication_start_date = pendulum.parse(self._replication_start_date)
+
+        data = {
+            "reportType": self.name,
+            "marketplaceIds": [self.marketplace_id],
+            "dataStartTime": replication_start_date.strftime(DATE_TIME_FORMAT),
+        }
+        return data
+
+
+class FlatFileSettlementV2Reports(ReportsAmazonSPStream):
+
+    name = "GET_V2_SETTLEMENT_REPORT_DATA_FLAT_FILE"
+
+    def _create_report(
+        self,
+        sync_mode: SyncMode,
+        cursor_field: List[str] = None,
+        stream_slice: Mapping[str, Any] = None,
+        stream_state: Mapping[str, Any] = None,
+    ) -> Mapping[str, Any]:
+
+        # For backwards
+
+        return {"reportId": stream_slice.get("report_id")}
+
+    def stream_slices(
+        self, *, sync_mode: SyncMode, cursor_field: List[str] = None, stream_state: Mapping[str, Any] = None
+    ) -> Iterable[Optional[Mapping[str, Any]]]:
+        """
+        From https://developer-docs.amazon.com/sp-api/docs/report-type-values
+        documentation:
+        ```Settlement reports cannot be requested or scheduled.
+            They are automatically scheduled by Amazon.
+            You can search for these reports using the getReports operation.
+        ```
+        """
+
+        strict_start_date = pendulum.now("utc").subtract(days=90)
+
+        create_date = max(pendulum.parse(self._replication_start_date), strict_start_date)
+        end_date = pendulum.parse(self._replication_end_date or pendulum.now("utc").date().to_date_string())
+
+        if end_date < strict_start_date:
+            end_date = pendulum.now("utc")
+
+        params = {
+            "reportTypes": self.name,
+            "pageSize": 100,
+            "createdSince": create_date.strftime(DATE_TIME_FORMAT),
+            "createdUntil": end_date.strftime(DATE_TIME_FORMAT),
+        }
+        unique_records = list()
+        complete = False
+
+        while not complete:
+
+            request_headers = self.request_headers()
+            get_reports = self._create_prepared_request(
+                http_method="GET",
+                path=f"{self.path_prefix}/reports",
+                headers=dict(request_headers, **self.authenticator.get_auth_header()),
+                params=params,
+            )
+            report_response = self._send_request(get_reports)
+            response = report_response.json()
+            data = response.get(self.data_field, list())
+
+            records = [e.get("reportId") for e in data if e and e.get("reportId") not in unique_records]
+            unique_records += records
+            reports = [{"report_id": report_id} for report_id in records]
+
+            yield from reports
+
+            next_value = response.get("nextToken", None)
+            params = {"nextToken": next_value}
+            if not next_value:
+                complete = True

@@ -4,7 +4,7 @@
 
 from airbyte_cdk.models import AdvancedAuth, AuthFlowType, OAuthConfigSpecification
 from pydantic import BaseModel, Field
-from source_amazon_seller_partner.constants import AWSEnvironment, AWSRegion
+from source_amazon_seller_partner.constants import AWSEnvironment, AWSRegion, AWSSellerType
 
 
 class AmazonSellerPartnerConfig(BaseModel):
@@ -81,6 +81,9 @@ class AmazonSellerPartnerConfig(BaseModel):
 
     aws_environment: AWSEnvironment = Field(description="Select the AWS Environment.", title="AWS Environment")
     region: AWSRegion = Field(description="Select the AWS Region.", title="AWS Region")
+    seller_type: AWSSellerType = Field(
+        description="Are your credentials for seller central or vendor central", title="credential type", examples=["seller", "vendor"]
+    )
 
 
 advanced_auth = AdvancedAuth(

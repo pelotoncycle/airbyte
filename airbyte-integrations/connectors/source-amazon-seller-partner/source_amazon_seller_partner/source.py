@@ -5,12 +5,13 @@
 from typing import Any, List, Mapping, Tuple
 
 import boto3
+import pendulum
 from airbyte_cdk.logger import AirbyteLogger
 from airbyte_cdk.models import ConnectorSpecification, SyncMode
 from airbyte_cdk.sources import AbstractSource
 from airbyte_cdk.sources.streams import Stream
 from source_amazon_seller_partner.auth import AWSAuthenticator, AWSSignature
-from source_amazon_seller_partner.constants import get_marketplaces
+from source_amazon_seller_partner.constants import AWSSellerType, get_marketplaces
 from source_amazon_seller_partner.spec import AmazonSellerPartnerConfig, advanced_auth
 from source_amazon_seller_partner.streams import (
     BrandAnalyticsAlternatePurchaseReports,
@@ -18,13 +19,16 @@ from source_amazon_seller_partner.streams import (
     BrandAnalyticsMarketBasketReports,
     BrandAnalyticsRepeatPurchaseReports,
     BrandAnalyticsSearchTermsReports,
+    FbaCustomerReturnsReports,
     FbaInventoryReports,
     FbaOrdersReports,
     FbaReplacementsReports,
     FbaShipmentsReports,
+    FbaStorageFeesReports,
     FlatFileOpenListingsReports,
     FlatFileOrdersReports,
     FlatFileOrdersReportsByLastUpdate,
+    FlatFileSettlementV2Reports,
     FulfilledShipmentsReports,
     GetXmlBrowseTreeData,
     ListFinancialEventGroups,
@@ -34,6 +38,7 @@ from source_amazon_seller_partner.streams import (
     SellerFeedbackReports,
     VendorDirectFulfillmentShipping,
     VendorInventoryHealthReports,
+    VendorInventoryReport,
     VendorPurchaseOrders,
 )
 
@@ -100,9 +105,21 @@ class SourceAmazonSellerPartner(AbstractSource):
         try:
             config = AmazonSellerPartnerConfig.parse_obj(config)  # FIXME: this will be not need after we fix CDK
             stream_kwargs = self._get_stream_kwargs(config)
-            orders_stream = Orders(**stream_kwargs)
-            next(orders_stream.read_records(sync_mode=SyncMode.full_refresh))
-            return True, None
+            if config.seller_type.upper() == AWSSellerType.SELLER:
+                orders_stream = Orders(**stream_kwargs)
+                next(orders_stream.read_records(sync_mode=SyncMode.full_refresh))
+                return True, None
+            else:
+                orders_stream = VendorPurchaseOrders(**stream_kwargs)
+                current_end = pendulum.now("utc")
+                start_date = current_end.subtract(days=7)
+                stream_slice = {
+                    "isPOChanged": "true",
+                    "changedAfter": start_date.strftime(orders_stream.time_format),
+                    "changedBefore": current_end.strftime(orders_stream.time_format),
+                }
+                next(orders_stream.read_records(sync_mode=SyncMode.incremental, stream_slice=stream_slice))
+                return True, None
         except Exception as e:
             if isinstance(e, StopIteration):
                 logger.error(
@@ -118,19 +135,23 @@ class SourceAmazonSellerPartner(AbstractSource):
         stream_kwargs = self._get_stream_kwargs(config)
 
         return [
+            FbaCustomerReturnsReports(**stream_kwargs),
             FbaInventoryReports(**stream_kwargs),
             FbaOrdersReports(**stream_kwargs),
             FbaShipmentsReports(**stream_kwargs),
             FbaReplacementsReports(**stream_kwargs),
+            FbaStorageFeesReports(**stream_kwargs),
             FlatFileOpenListingsReports(**stream_kwargs),
             FlatFileOrdersReports(**stream_kwargs),
             FlatFileOrdersReportsByLastUpdate(**stream_kwargs),
+            FlatFileSettlementV2Reports(**stream_kwargs),
             FulfilledShipmentsReports(**stream_kwargs),
             MerchantListingsReports(**stream_kwargs),
             VendorDirectFulfillmentShipping(**stream_kwargs),
             VendorInventoryHealthReports(**stream_kwargs),
             Orders(**stream_kwargs),
             VendorPurchaseOrders(**stream_kwargs),
+            VendorInventoryReport(**stream_kwargs),
             SellerFeedbackReports(**stream_kwargs),
             BrandAnalyticsMarketBasketReports(**stream_kwargs),
             BrandAnalyticsSearchTermsReports(**stream_kwargs),
@@ -151,7 +172,7 @@ class SourceAmazonSellerPartner(AbstractSource):
         schema = AmazonSellerPartnerConfig.schema()
         schema["properties"]["aws_environment"] = schema["definitions"]["AWSEnvironment"]
         schema["properties"]["region"] = schema["definitions"]["AWSRegion"]
-
+        schema["properties"]["seller_type"] = schema["definitions"]["AWSSellerType"]
         return ConnectorSpecification(
             documentationUrl="https://docs.airbyte.io/integrations/sources/amazon-seller-partner",
             changelogUrl="https://docs.airbyte.io/integrations/sources/amazon-seller-partner",
