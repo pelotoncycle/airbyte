@@ -86,6 +86,13 @@ public class SnowflakeS3StagingSqlOperations extends SnowflakeSqlOperations impl
   }
 
   @Override
+  public String deleteFromTableQuery(final JdbcDatabase database, final String schemaName, final String sourceTableName, final String destinationTableName,
+      final List<List<String>> primaryKeys) {
+    return "select 1;";
+  }
+
+
+  @Override
   public void copyIntoTmpTableFromStage(final JdbcDatabase database,
                                         final String stageName,
                                         final String stagingPath,

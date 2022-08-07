@@ -125,6 +125,13 @@ public class SnowflakeInternalStagingSqlOperations extends SnowflakeSqlOperation
     database.execute(query);
   }
 
+  @Override
+  public String deleteFromTableQuery(final JdbcDatabase database, final String schemaName, final String sourceTableName, final String destinationTableName,
+      final List<List<String>> primaryKeys) {
+    return "select 1;";
+  }
+
+
   protected String getCreateStageQuery(final String stageName) {
     return String.format(CREATE_STAGE_QUERY, stageName);
   }

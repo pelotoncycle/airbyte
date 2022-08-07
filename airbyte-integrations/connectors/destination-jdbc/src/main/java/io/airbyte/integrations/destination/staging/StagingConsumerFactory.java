@@ -49,8 +49,8 @@ public class StagingConsumerFactory {
   // in a previous attempt but failed to load to the warehouse for some reason (interrupted?) instead.
   // This would also allow other programs/scripts
   // to load (or reload backups?) in the connection's staging area to be loaded at the next sync.
-  private static final DateTime SYNC_DATETIME = DateTime.now(DateTimeZone.UTC);
-  private final UUID RANDOM_CONNECTION_ID = UUID.randomUUID();
+  public static final DateTime SYNC_DATETIME = DateTime.now(DateTimeZone.UTC);
+  public final UUID RANDOM_CONNECTION_ID = UUID.randomUUID();
 
   public AirbyteMessageConsumer create(final Consumer<AirbyteMessage> outputRecordCollector,
                                        final JdbcDatabase database,
@@ -73,14 +73,14 @@ public class StagingConsumerFactory {
         stagingOperations::isValidData);
   }
 
-  private static List<WriteConfig> createWriteConfigs(final NamingConventionTransformer namingResolver,
+  public static List<WriteConfig> createWriteConfigs(final NamingConventionTransformer namingResolver,
                                                       final JsonNode config,
                                                       final ConfiguredAirbyteCatalog catalog) {
 
     return catalog.getStreams().stream().map(toWriteConfig(namingResolver, config)).collect(Collectors.toList());
   }
 
-  private static Function<ConfiguredAirbyteStream, WriteConfig> toWriteConfig(final NamingConventionTransformer namingResolver,
+  public static Function<ConfiguredAirbyteStream, WriteConfig> toWriteConfig(final NamingConventionTransformer namingResolver,
                                                                               final JsonNode config) {
     return stream -> {
       Preconditions.checkNotNull(stream.getDestinationSyncMode(), "Undefined destination sync mode");
@@ -92,9 +92,8 @@ public class StagingConsumerFactory {
       final String tableName = namingResolver.getRawTableName(streamName);
       final String tmpTableName = namingResolver.getTmpTableName(streamName);
       final DestinationSyncMode syncMode = stream.getDestinationSyncMode();
-
       final WriteConfig writeConfig =
-          new WriteConfig(streamName, abStream.getNamespace(), outputSchema, tmpTableName, tableName, syncMode, SYNC_DATETIME);
+          new WriteConfig(streamName, abStream.getNamespace(), outputSchema, tmpTableName, tableName, stream.getPrimaryKey(), syncMode,SYNC_DATETIME);
       LOGGER.info("Write config: {}", writeConfig);
 
       return writeConfig;
@@ -109,7 +108,7 @@ public class StagingConsumerFactory {
         : namingResolver.getNamespace(defaultDestSchema);
   }
 
-  private OnStartFunction onStartFunction(final JdbcDatabase database,
+  public OnStartFunction onStartFunction(final JdbcDatabase database,
                                           final StagingOperations stagingOperations,
                                           final List<WriteConfig> writeConfigs) {
     return () -> {
@@ -139,7 +138,7 @@ public class StagingConsumerFactory {
     return new AirbyteStreamNameNamespacePair(config.getStreamName(), config.getNamespace());
   }
 
-  private CheckedBiConsumer<AirbyteStreamNameNamespacePair, SerializableBuffer, Exception> flushBufferFunction(
+  public CheckedBiConsumer<AirbyteStreamNameNamespacePair, SerializableBuffer, Exception> flushBufferFunction(
                                                                                                                final JdbcDatabase database,
                                                                                                                final StagingOperations stagingOperations,
                                                                                                                final List<WriteConfig> writeConfigs,
@@ -148,7 +147,6 @@ public class StagingConsumerFactory {
         writeConfigs.stream()
             .collect(Collectors.toUnmodifiableMap(
                 StagingConsumerFactory::toNameNamespacePair, Function.identity()));
-
     return (pair, writer) -> {
       LOGGER.info("Flushing buffer for stream {} ({}) to staging", pair.getName(), FileUtils.byteCountToDisplaySize(writer.getByteCount()));
       if (!pairToWriteConfig.containsKey(pair)) {
@@ -171,7 +169,7 @@ public class StagingConsumerFactory {
     };
   }
 
-  private OnCloseFunction onCloseFunction(final JdbcDatabase database,
+  public OnCloseFunction onCloseFunction(final JdbcDatabase database,
                                           final StagingOperations stagingOperations,
                                           final List<WriteConfig> writeConfigs,
                                           final boolean purgeStagingData) {

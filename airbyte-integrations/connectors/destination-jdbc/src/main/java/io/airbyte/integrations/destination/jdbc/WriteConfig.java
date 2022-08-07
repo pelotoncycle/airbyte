@@ -6,7 +6,10 @@ package io.airbyte.integrations.destination.jdbc;
 
 import io.airbyte.protocol.models.DestinationSyncMode;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 
@@ -26,13 +29,16 @@ public class WriteConfig {
   private final DateTime writeDatetime;
   private final List<String> stagedFiles;
 
+  private final List<List<String>> primaryKeys;
+
   public WriteConfig(final String streamName,
                      final String namespace,
                      final String outputSchemaName,
                      final String tmpTableName,
                      final String outputTableName,
+                     final List<List<String>> primaryKeys,
                      final DestinationSyncMode syncMode) {
-    this(streamName, namespace, outputSchemaName, tmpTableName, outputTableName, syncMode, DateTime.now(DateTimeZone.UTC));
+    this(streamName, namespace, outputSchemaName, tmpTableName, outputTableName, primaryKeys, syncMode, DateTime.now(DateTimeZone.UTC));
   }
 
   public WriteConfig(final String streamName,
@@ -40,6 +46,7 @@ public class WriteConfig {
                      final String outputSchemaName,
                      final String tmpTableName,
                      final String outputTableName,
+                     final List<List<String>> primaryKeys,
                      final DestinationSyncMode syncMode,
                      final DateTime writeDatetime) {
     this.streamName = streamName;
@@ -49,6 +56,7 @@ public class WriteConfig {
     this.outputTableName = outputTableName;
     this.syncMode = syncMode;
     this.stagedFiles = new ArrayList<>();
+    this.primaryKeys = primaryKeys;
     this.writeDatetime = writeDatetime;
   }
 
@@ -91,9 +99,12 @@ public class WriteConfig {
   public void clearStagedFiles() {
     stagedFiles.clear();
   }
-
+  public List<List<String>> getPrimaryKeys() {
+    return primaryKeys;
+  }
   @Override
   public String toString() {
+
     return "WriteConfig{" +
         "streamName=" + streamName +
         ", namespace=" + namespace +
@@ -101,6 +112,7 @@ public class WriteConfig {
         ", tmpTableName=" + tmpTableName +
         ", outputTableName=" + outputTableName +
         ", syncMode=" + syncMode +
+        ", primaryKeys=" + getPrimaryKeys().stream().map( keys -> String.join(".", keys)).collect(Collectors.joining(", ")) +
         '}';
   }
 

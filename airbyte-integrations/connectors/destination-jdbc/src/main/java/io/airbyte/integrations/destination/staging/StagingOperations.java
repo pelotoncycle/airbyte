@@ -22,6 +22,7 @@ public interface StagingOperations extends SqlOperations {
    */
   void createStageIfNotExists(JdbcDatabase database, String stageName) throws Exception;
 
+  String deleteFromTableQuery(JdbcDatabase database, String schemaName, String sourceTableName, String destinationTableName, List<List<String>> primaryKeys);
   /**
    * Upload the data file into the stage area.
    *
@@ -29,6 +30,7 @@ public interface StagingOperations extends SqlOperations {
    */
   String uploadRecordsToStage(JdbcDatabase database, SerializableBuffer recordsData, String schemaName, String stageName, String stagingPath)
       throws Exception;
+
 
   /**
    * Load the data stored in the stage area into a temporary table in the destination
