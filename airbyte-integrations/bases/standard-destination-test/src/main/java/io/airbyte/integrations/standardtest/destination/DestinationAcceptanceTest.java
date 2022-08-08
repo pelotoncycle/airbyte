@@ -684,7 +684,7 @@ public abstract class DestinationAcceptanceTest {
         }).collect(Collectors.toList());
 
     final String defaultSchema = getDefaultSchema(config);
-    retrieveRawRecordsAndAssertSameMessages(catalog, expectedMessagesAfterSecondSync, defaultSchema);
+    retrieveRawRecordsAndAssertSameMessages(catalog, expectedMessages, defaultSchema);
     final List<AirbyteRecordMessage> actualMessages = retrieveNormalizedRecords(catalog, defaultSchema);
     assertSameMessages(expectedMessages, actualMessages, true);
   }

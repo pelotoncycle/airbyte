@@ -85,8 +85,8 @@ public class RedshiftS3StagingSqlOperations extends RedshiftSqlOperations implem
   @Override
   public String deleteFromTableQuery(final JdbcDatabase database, final String schemaName, final String sourceTableName, final String destinationTableName,
       final List<List<String>> primaryKeys) {
-    final List<String> primaryKeysEscaoed = primaryKeys.stream().map(keys -> keys.stream().map(key -> String.format("\"%s\"", key)).collect(Collectors.joining("."))).toList();
-    final String whereCondition = primaryKeysEscaoed.stream()
+
+    final String whereCondition = escapePrimaryKeys(primaryKeys).stream()
         .map((String pk) -> {
           final String sourceColumn = String.format("CAST(%s.%s.%s as VARCHAR(MAX))", sourceTableName, JavaBaseConstants.COLUMN_NAME_DATA, pk);
           final String targetColumn = String.format("CAST(%s.%s.%s as VARCHAR(MAX))", destinationTableName, JavaBaseConstants.COLUMN_NAME_DATA, pk);
@@ -95,6 +95,17 @@ public class RedshiftS3StagingSqlOperations extends RedshiftSqlOperations implem
     return String.format("DELETE from %s.%s USING %s.%s WHERE %s;", schemaName, destinationTableName, schemaName, sourceTableName, whereCondition);
   }
 
+  private List<String> escapePrimaryKeys(final List<List<String>> pks) {
+    return pks.stream().map(keys -> keys.stream().map(key -> String.format("\"%s\"", key)).collect(Collectors.joining("."))).toList();
+  }
+
+  public String copyTableQuery(final JdbcDatabase database, final String schemaName, final String srcTableName, final String dstTableName, final List<List<String>> primaryKeys) {
+    final String partitionedBy = escapePrimaryKeys(primaryKeys).stream()
+        .map((String pk) -> String.format("CAST(%s.%s as VARCHAR(MAX))", JavaBaseConstants.COLUMN_NAME_DATA, pk)).collect(Collectors.joining(", "));
+    final String rowNumber = String.format("ROW_NUMBER() OVER (PARTITION BY %s order by %s desc) as _rn", partitionedBy, JavaBaseConstants.COLUMN_NAME_EMITTED_AT);
+    final String cteQuery = String.format("WITH dedup_table as (SELECT %s,%s,%s, %s FROM %s.%s)", JavaBaseConstants.COLUMN_NAME_AB_ID,JavaBaseConstants.COLUMN_NAME_DATA, JavaBaseConstants.COLUMN_NAME_EMITTED_AT, rowNumber,schemaName,srcTableName);
+    return String.format("INSERT INTO %s.%s\n%s\nSELECT %s,%s,%s FROM dedup_table where _rn = 1;", schemaName, dstTableName, cteQuery,JavaBaseConstants.COLUMN_NAME_AB_ID,JavaBaseConstants.COLUMN_NAME_DATA, JavaBaseConstants.COLUMN_NAME_EMITTED_AT);
+  }
 
   @Override
   public String uploadRecordsToStage(final JdbcDatabase database, final SerializableBuffer recordsData, final String schemaName, final String stageName, final String stagingPath)

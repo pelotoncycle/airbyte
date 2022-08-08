@@ -126,6 +126,7 @@ public class RedshiftStagingS3Destination extends AbstractJdbcDestination implem
         config.has("uploading_method") ? EncryptionConfig.fromJson(config.get("uploading_method").get(JdbcUtils.ENCRYPTION_KEY)) : new NoEncryption();
     final JsonNode s3Options = findS3Options(config);
     final S3DestinationConfig s3Config = getS3DestinationConfig(s3Options);
+    LOGGER.info("creating redshift staging consumer");
     return new RedshiftStagingConsumerFactory().create(
         outputRecordCollector,
         getDatabase(getDataSource(config)),
