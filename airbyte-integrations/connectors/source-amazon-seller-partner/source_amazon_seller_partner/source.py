@@ -5,7 +5,6 @@
 from typing import Any, List, Mapping, Tuple
 
 import boto3
-import pendulum
 from airbyte_cdk.logger import AirbyteLogger
 from airbyte_cdk.models import ConnectorSpecification, SyncMode
 from airbyte_cdk.sources import AbstractSource
@@ -110,15 +109,16 @@ class SourceAmazonSellerPartner(AbstractSource):
                 next(orders_stream.read_records(sync_mode=SyncMode.full_refresh))
                 return True, None
             else:
-                orders_stream = VendorPurchaseOrders(**stream_kwargs)
-                current_end = pendulum.now("utc")
-                start_date = current_end.subtract(days=7)
-                stream_slice = {
-                    "isPOChanged": "true",
-                    "changedAfter": start_date.strftime(orders_stream.time_format),
-                    "changedBefore": current_end.strftime(orders_stream.time_format),
-                }
-                next(orders_stream.read_records(sync_mode=SyncMode.incremental, stream_slice=stream_slice))
+                # vendor orders do not always exist in the last 7 days, need another check that is fast.
+                # orders_stream = VendorPurchaseOrders(**stream_kwargs)
+                # current_end = pendulum.now("utc")
+                # start_date = current_end.subtract(days=7)
+                # stream_slice = {
+                #     "isPOChanged": "true",
+                #     "changedAfter": start_date.strftime(orders_stream.time_format),
+                #     "changedBefore": current_end.strftime(orders_stream.time_format),
+                # }
+                # next(orders_stream.read_records(sync_mode=SyncMode.incremental, stream_slice=stream_slice))
                 return True, None
         except Exception as e:
             if isinstance(e, StopIteration):
