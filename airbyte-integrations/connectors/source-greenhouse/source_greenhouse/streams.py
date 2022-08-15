@@ -3,7 +3,7 @@
 #
 
 from abc import ABC, abstractmethod
-from typing import Any, Iterable, Mapping, MutableMapping, Optional, Type
+from typing import Any, Iterable, List, Mapping, MutableMapping, Optional, Type, Union
 from urllib import parse
 
 import requests
@@ -42,6 +42,41 @@ class GreenhouseStream(HttpStream, ABC):
         yield from response.json()
 
 
+class IncrementalGreenhouseStream(GreenhouseStream):
+    def __init__(self, replication_start_date, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._replication_start_date = replication_start_date
+
+    @property
+    @abstractmethod
+    def cursor_field(self) -> Union[str, List[str]]:
+        pass
+
+    @property
+    @abstractmethod
+    def benchmark_field(self) -> Union[str, List[str]]:
+        pass
+
+    def request_params(
+        self, stream_state: Mapping[str, Any], next_page_token: Mapping[str, Any] = None, **kwargs
+    ) -> MutableMapping[str, Any]:
+        params = super().request_params(next_page_token, **kwargs)
+
+        params.update({self.cursor_field: self._replication_start_date})
+
+        if self._replication_start_date and self.cursor_field:
+            start_date = max(stream_state.get(self.cursor_field, self._replication_start_date), self._replication_start_date)
+            params.update({self.cursor_field: start_date})
+
+        return params
+
+    def get_updated_state(self, current_stream_state: MutableMapping[str, Any], latest_record: Mapping[str, Any]) -> Mapping[str, Any]:
+        latest_benchmark = latest_record[self.benchmark_field]
+        if current_stream_state.get(self.cursor_field):
+            return {self.cursor_field: max(latest_benchmark, current_stream_state[self.cursor_field])}
+        return {self.cursor_field: latest_benchmark}
+
+
 class GreenhouseSubStream(GreenhouseStream):
     @property
     @abstractmethod
@@ -67,10 +102,13 @@ class GreenhouseSubStream(GreenhouseStream):
         return self.path_template.format(parent_id=stream_slice["parent_id"])
 
 
-class Applications(GreenhouseStream):
+class Applications(IncrementalGreenhouseStream):
     """
     Docs: https://developers.greenhouse.io/harvest.html#get-list-applications
     """
+
+    cursor_field = "last_activity_after"
+    benchmark_field = "last_activity_at"
 
 
 class ApplicationsDemographicsAnswers(GreenhouseSubStream, GreenhouseStream):
@@ -91,10 +129,13 @@ class ApplicationsInterviews(GreenhouseSubStream, GreenhouseStream):
     path_template = "applications/{parent_id}/scheduled_interviews"
 
 
-class Candidates(GreenhouseStream):
+class Candidates(IncrementalGreenhouseStream):
     """
     Docs: https://developers.greenhouse.io/harvest.html#get-list-candidates
     """
+
+    cursor_field = "updated_after"
+    benchmark_field = "updated_at"
 
 
 class CloseReasons(GreenhouseStream):
@@ -175,7 +216,7 @@ class Departments(GreenhouseStream):
     """
 
 
-class Interviews(GreenhouseStream):
+class Interviews(IncrementalGreenhouseStream):
     """
     Docs: https://developers.greenhouse.io/harvest.html#get-list-scheduled-interviews
     """
@@ -183,23 +224,35 @@ class Interviews(GreenhouseStream):
     def path(self, **kwargs) -> str:
         return "scheduled_interviews"
 
+    cursor_field = "updated_after"
+    benchmark_field = "updated_at"
 
-class JobPosts(GreenhouseStream):
+
+class JobPosts(IncrementalGreenhouseStream):
     """
     Docs: https://developers.greenhouse.io/harvest.html#get-list-job-posts
     """
 
+    cursor_field = "updated_after"
+    benchmark_field = "updated_at"
 
-class JobStages(GreenhouseStream):
+
+class JobStages(IncrementalGreenhouseStream):
     """
     Docs: https://developers.greenhouse.io/harvest.html#get-list-job-stages
     """
 
+    cursor_field = "updated_after"
+    benchmark_field = "updated_at"
 
-class Jobs(GreenhouseStream):
+
+class Jobs(IncrementalGreenhouseStream):
     """
     Docs: https://developers.greenhouse.io/harvest.html#get-list-jobs
     """
+
+    cursor_field = "updated_after"
+    benchmark_field = "updated_at"
 
 
 class JobsOpenings(GreenhouseSubStream, GreenhouseStream):
@@ -220,10 +273,13 @@ class JobsStages(GreenhouseSubStream, GreenhouseStream):
     path_template = "jobs/{parent_id}/stages"
 
 
-class Offers(GreenhouseStream):
+class Offers(IncrementalGreenhouseStream):
     """
     Docs: https://developers.greenhouse.io/harvest.html#get-list-offers
     """
+
+    cursor_field = "updated_after"
+    benchmark_field = "updated_at"
 
 
 class RejectionReasons(GreenhouseStream):
@@ -232,10 +288,13 @@ class RejectionReasons(GreenhouseStream):
     """
 
 
-class Scorecards(GreenhouseStream):
+class Scorecards(IncrementalGreenhouseStream):
     """
     Docs: https://developers.greenhouse.io/harvest.html#get-list-scorecards
     """
+
+    cursor_field = "updated_after"
+    benchmark_field = "updated_at"
 
 
 class Sources(GreenhouseStream):
@@ -244,7 +303,10 @@ class Sources(GreenhouseStream):
     """
 
 
-class Users(GreenhouseStream):
+class Users(IncrementalGreenhouseStream):
     """
     Docs: https://developers.greenhouse.io/harvest.html#get-list-users
     """
+
+    cursor_field = "updated_after"
+    benchmark_field = "updated_at"
