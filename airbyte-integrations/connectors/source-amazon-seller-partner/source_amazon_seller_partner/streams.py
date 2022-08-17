@@ -262,6 +262,7 @@ class ReportsAmazonSPStream(Stream, ABC):
     ) -> Mapping[str, Any]:
         request_headers = self.request_headers()
         report_data = self._report_data(sync_mode, cursor_field, stream_slice, stream_state)
+        print(f"got report data {report_data}")
         create_report_request = self._create_prepared_request(
             http_method="POST",
             path=f"{self.path_prefix}/reports",
@@ -301,7 +302,7 @@ class ReportsAmazonSPStream(Stream, ABC):
             return decrypted.decode("iso-8859-1")
         raise Exception([{"message": "Only AES decryption is implemented."}])
 
-    def parse_response(self, response: requests.Response) -> Iterable[Mapping]:
+    def _get_document_from_response(self, response: requests.Response):
         payload = response.json().get(self.data_field, {})
         document = self.decrypt_report_document(
             payload.get("url"),
@@ -310,7 +311,15 @@ class ReportsAmazonSPStream(Stream, ABC):
             payload.get("encryptionDetails", {}).get("standard"),
             payload,
         )
+        return document
 
+    def parse_error_response(self, response: requests.Response) -> str:
+        document = self._get_document_from_response(response)
+        error = json_lib.loads(document)
+        return error["errorDetails"]
+
+    def parse_response(self, response: requests.Response) -> Iterable[Mapping]:
+        document = self._get_document_from_response(response)
         document_records = self.parse_document(document)
         yield from document_records
 
@@ -360,7 +369,17 @@ class ReportsAmazonSPStream(Stream, ABC):
             response = self._send_request(request)
             yield from self.parse_response(response)
         elif is_fatal:
-            raise Exception(f"The report for stream '{self.name}' was aborted due to a fatal error")
+            document_id = report_payload["reportDocumentId"]
+            request_headers = self.request_headers()
+            request = self._create_prepared_request(
+                path=self.path(document_id=document_id),
+                headers=dict(request_headers, **self.authenticator.get_auth_header()),
+                params=self.request_params(),
+            )
+            response = self._send_request(request)
+            error_response = self.parse_error_response(response)
+            logger.error(f"Got error response from REPORTING API: {error_response}")
+            raise Exception(f"The report for stream '{self.name}' was aborted due to a fatal error.")
         elif is_cancelled:
             logger.warn(f"The report for stream '{self.name}' was cancelled or there is no data to return")
         else:
@@ -470,13 +489,13 @@ class BrandAnalyticsStream(ReportsAmazonSPStream):
             return {}
         else:
             now = pendulum.now("utc")
+            daily_buffer = report_options.pop("daily_buffer_in_hours", 24)
             if report_options["reportPeriod"] == "DAY":
-                now = now.subtract(days=1)
+                now = now.subtract(hours=daily_buffer)
                 data_start_time = now.start_of("day")
                 data_end_time = now.end_of("day")
             elif report_options["reportPeriod"] == "WEEK":
                 now = now.subtract(weeks=1)
-
                 # According to report api docs
                 # dataStartTime must be a Sunday and dataEndTime must be the following Saturday
                 pendulum.week_starts_at(pendulum.SUNDAY)
@@ -529,6 +548,11 @@ class BrandAnalyticsAlternatePurchaseReports(BrandAnalyticsStream):
 class BrandAnalyticsItemComparisonReports(BrandAnalyticsStream):
     name = "GET_BRAND_ANALYTICS_ITEM_COMPARISON_REPORT"
     result_key = "dataByAsin"
+
+
+class VendorInventoryReport(BrandAnalyticsStream):
+    name = "GET_VENDOR_INVENTORY_REPORT"
+    result_key = "inventoryByAsin"
 
 
 class IncrementalReportsAmazonSPStream(ReportsAmazonSPStream):
@@ -706,6 +730,102 @@ class Orders(IncrementalAmazonSPStream):
             return 1 / float(rate_limit)
         else:
             return self.default_backoff_time
+
+
+class VendorPurchaseOrders(IncrementalAmazonSPStream):
+    """
+    API model:
+    """
+
+    name = "VendorPurchaseOrders"
+    primary_key = "purchaseOrderNumber"
+    replication_start_date_field = "changedAfter"
+    replication_end_date_field = "changedBefore"
+    next_page_token_field = "nextToken"
+    page_size_field = "limit"
+    time_format = "%Y-%m-%dT%H:%M:%SZ"
+    default_backoff_time = 60
+    default_cursor_field = None
+    cursor_field = ["orderDetails.purchaseOrderDate", "orderDetails.purchaseOrderChangedDate"]
+    time_increment = {"days": 6, "hours": 23, "minutes": 59, "seconds": 59}
+    time_skip = {"seconds": 1}
+
+    def path(self, **kwargs) -> str:
+        return f"vendor/orders/{VENDORS_API_VERSION}/purchaseOrders"
+
+    def stream_slices(
+        self, *, sync_mode: SyncMode, cursor_field: List[str] = None, stream_state: Mapping[str, Any] = None
+    ) -> Iterable[Optional[Mapping[str, Any]]]:
+
+        slices = []
+        state_stream = stream_state or {}
+        for cursor_field in self.cursor_field:
+            start_date = (
+                pendulum.parse(state_stream.get(cursor_field))
+                if (stream_state and cursor_field in stream_state)
+                else pendulum.parse(self._replication_start_date)
+            )
+            end_date = pendulum.parse(self._replication_end_date) if self._replication_end_date else pendulum.now("utc")
+            is_modified_stream = not cursor_field.endswith("purchaseOrderDate")
+            while start_date <= end_date:
+                current_end = start_date.add(**self.time_increment)
+                if is_modified_stream:
+                    slices.append(
+                        {
+                            "isPOChanged": str(is_modified_stream).lower(),
+                            "changedAfter": start_date.strftime(self.time_format),
+                            "changedBefore": current_end.strftime(self.time_format),
+                        }
+                    )
+                else:
+                    slices.append(
+                        {
+                            "isPOChanged": str(is_modified_stream).lower(),
+                            "createdAfter": start_date.strftime(self.time_format),
+                            "createdBefore": current_end.strftime(self.time_format),
+                        }
+                    )
+                start_date = current_end.add(**self.time_skip)
+        yield from slices
+
+    def request_params(
+        self, stream_state: Mapping[str, Any], stream_slice: Mapping[str, Any] = None, next_page_token: Mapping[str, Any] = None, **kwargs
+    ) -> MutableMapping[str, Any]:
+        if next_page_token:
+            return dict(next_page_token)
+        else:
+            params = {"MarketplaceIds": self.marketplace_id}
+            params.update(stream_slice)
+            return params
+
+    def parse_response(self, response: requests.Response, stream_state: Mapping[str, Any], **kwargs) -> Iterable[Mapping]:
+        yield from response.json().get(self.data_field, {}).get("orders", [])
+
+    def backoff_time(self, response: requests.Response) -> Optional[float]:
+        rate_limit = response.headers.get("x-amzn-RateLimit-Limit", 0)
+        if rate_limit:
+            return 1 / float(rate_limit)
+        else:
+            return self.default_backoff_time
+
+    def get_updated_state(self, current_stream_state: MutableMapping[str, Any], latest_record: Mapping[str, Any]) -> Mapping[str, Any]:
+        """
+        Return the latest state by comparing the cursor value in the latest record with the stream's most recent state object
+        and returning an updated state object.
+        """
+        new_state = {}
+
+        for v in self.cursor_field:
+            old_bookmark = (
+                pendulum.parse(current_stream_state.get(v)) if v in current_stream_state else pendulum.parse(self._replication_start_date)
+            )
+            parent_key, value_key = v.split(".")
+            current_bookmark = (
+                pendulum.parse(latest_record[parent_key].get(value_key)) if value_key in latest_record[parent_key] else old_bookmark
+            )
+            new_bookmark = max(current_bookmark, old_bookmark)
+            new_state[v] = new_bookmark.strftime(self.time_format)
+        return new_state
 
 
 class VendorDirectFulfillmentShipping(AmazonSPStream):

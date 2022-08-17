@@ -62,6 +62,11 @@ class AWSRegion(str, Enum):
     US = "US"
 
 
+class AWSSellerType(str, Enum):
+    VENDOR = "vendor"
+    SELLER = "seller"
+
+
 def get_aws_base_url(aws_env: AWSEnvironment) -> str:
     if aws_env == AWSEnvironment.PRODUCTION:
         return "https://sellingpartnerapi"
