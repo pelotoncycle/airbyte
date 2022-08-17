@@ -555,6 +555,11 @@ class VendorInventoryReport(BrandAnalyticsStream):
     result_key = "inventoryByAsin"
 
 
+class VendorSalesReport(BrandAnalyticsStream):
+    name = "GET_VENDOR_SALES_REPORT"
+    result_key = "salesByAsin"
+
+
 class IncrementalReportsAmazonSPStream(ReportsAmazonSPStream):
     @property
     @abstractmethod

@@ -1,0 +1,35 @@
+{
+  "title": "Vendor Sales Report",
+  "description": "Vendor sales report",
+  "type": "object",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "properties": {
+    "startDate":  {"type": ["null", "string"]},
+    "endDate": {"type": ["null", "string"]},
+    "asin": {"type": ["null", "string"]},
+    "customerReturns":  {"type":  ["null", "number"]},
+    "orderedRevenue": {
+      "type": ["null", "object"],
+      "properties": {
+        "currencyCode": {"type":  ["null", "string"]},
+        "amount": {"type": ["null","number"]}
+      }
+    },
+    "orderedUnits": {"type":  ["null", "number"]},
+    "shippingCogs": {
+      "type": ["null", "object"],
+      "properties": {
+        "currencyCode": {"type":  ["null", "string"]},
+        "amount": {"type": ["null","number"]}
+      }
+    },
+    "shippedRevenue": {
+      "type": ["null", "object"],
+      "properties": {
+        "currencyCode": {"type":  ["null", "string"]},
+        "amount": {"type": ["null","number"]}
+      }
+    },
+    "shippedUnits": {"type": ["null","number"]}
+  }
+}
