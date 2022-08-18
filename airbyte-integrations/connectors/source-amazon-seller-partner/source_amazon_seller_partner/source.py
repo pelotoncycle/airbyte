@@ -38,8 +38,10 @@ from source_amazon_seller_partner.streams import (
     VendorDirectFulfillmentShipping,
     VendorInventoryHealthReports,
     VendorInventoryReport,
+    VendorNetPureProductMarginReport,
+    VendorPurchaseOrders,
     VendorSalesReport,
-    VendorPurchaseOrders
+    VendorTrafficReport,
 )
 
 
@@ -153,7 +155,9 @@ class SourceAmazonSellerPartner(AbstractSource):
             Orders(**stream_kwargs),
             VendorPurchaseOrders(**stream_kwargs),
             VendorSalesReport(**stream_kwargs),
+            VendorTrafficReport(**stream_kwargs),
             VendorInventoryReport(**stream_kwargs),
+            VendorNetPureProductMarginReport(**stream_kwargs),
             SellerFeedbackReports(**stream_kwargs),
             BrandAnalyticsMarketBasketReports(**stream_kwargs),
             BrandAnalyticsSearchTermsReports(**stream_kwargs),

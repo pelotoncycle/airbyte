@@ -1,0 +1,12 @@
+{
+  "title": "Vendor Traffic Report",
+  "description": "Vendor traffic report",
+  "type": "object",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "properties": {
+    "startDate":  {"type": ["null", "string"]},
+    "endDate": {"type": ["null", "string"]},
+    "asin": {"type": ["null", "string"]},
+    "glanceViews": {"type": ["null", "string"]}
+  }
+}

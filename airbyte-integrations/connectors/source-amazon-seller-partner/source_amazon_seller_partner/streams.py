@@ -262,7 +262,6 @@ class ReportsAmazonSPStream(Stream, ABC):
     ) -> Mapping[str, Any]:
         request_headers = self.request_headers()
         report_data = self._report_data(sync_mode, cursor_field, stream_slice, stream_state)
-        print(f"got report data {report_data}")
         create_report_request = self._create_prepared_request(
             http_method="POST",
             path=f"{self.path_prefix}/reports",
@@ -464,6 +463,128 @@ class GetXmlBrowseTreeData(ReportsAmazonSPStream):
     name = "GET_XML_BROWSE_TREE_DATA"
 
 
+class IncrementalReportsStream(ReportsAmazonSPStream):
+    cursor_field = "endDate"
+    _cursor_value = ""
+    primary_key = [["asin"], ["startDate"], ["endDate"]]
+
+    def parse_document(self, document):
+        parsed = json_lib.loads(document)
+        return parsed.get(self.result_key, [])
+
+    def stream_slices(
+        self, sync_mode: SyncMode, cursor_field: List[str] = None, stream_state: Mapping[str, Any] = None
+    ) -> Iterable[Optional[Mapping[str, Any]]]:
+        params = {
+            "reportType": self.name,
+            "marketplaceIds": [self.marketplace_id],
+        }
+        report_options = self.report_options()
+
+        return self._get_time_slices(params, report_options, stream_state)
+
+    def _get_time_slices(self, params, report_options, stream_state):
+        report_period = report_options.get("reportPeriod")
+        if report_period is None:
+            return [{}]
+        else:
+            replication_start_date = pendulum.parse(self._replication_start_date)
+            state_replication_start_date = (
+                pendulum.parse(stream_state.get(self.cursor_field)).add(days=1)
+                if self.cursor_field in stream_state
+                else replication_start_date
+            )
+            report_options.pop("daily_buffer_in_hours", 72)
+            if report_period == "DAY":
+                print(f"report period {report_period}")
+                data_end_time = pendulum.now("utc").subtract(days=3)
+                look_back_limit = data_end_time.subtract(days=1450)
+                data_start_time = max(state_replication_start_date, look_back_limit)
+                slices = []
+                while data_start_time < data_end_time:
+                    interval = data_end_time - data_start_time
+                    if interval.days > 14:
+                        slc = {
+                            "dataStartTime": data_start_time.strftime(DATE_TIME_FORMAT),
+                            "dataEndTime": data_start_time.add(days=14).strftime(DATE_TIME_FORMAT),
+                            "reportOptions": report_options,
+                        }
+                        slc.update(params)
+                        slices.append(slc)
+                        data_start_time = data_start_time.add(days=15)
+                    else:
+                        slc = {
+                            "dataStartTime": data_start_time.strftime(DATE_TIME_FORMAT),
+                            "dataEndTime": data_end_time.strftime(DATE_TIME_FORMAT),
+                            "reportOptions": report_options,
+                        }
+                        slc.update(params)
+                        slices.append(slc)
+                        data_start_time = data_end_time
+
+                return slices
+            if report_period == "WEEK":
+                pendulum.week_starts_at(pendulum.SUNDAY)
+                pendulum.week_ends_at(pendulum.SATURDAY)
+                data_end_time = pendulum.now("utc").subtract(weeks=1)
+                look_back_limit = data_end_time.subtract(weeks=6)
+                data_start_time = max(state_replication_start_date, look_back_limit)
+                slices = []
+                while data_start_time < data_end_time:
+                    interval = data_end_time - data_start_time
+                    if interval.in_weeks() >= 4:
+                        slc = {
+                            "dataStartTime": data_start_time.start_of("week").strftime(DATE_TIME_FORMAT),
+                            "dataEndTime": data_start_time.add(weeks=4).end_of("week").strftime(DATE_TIME_FORMAT),
+                            "reportOptions": report_options,
+                        }
+                        slc.update(params)
+                        slices.append(slc)
+                        data_start_time = data_start_time.add(weeks=4).end_of("week").add(days=1)
+                    else:
+                        slc = {
+                            "dataStartTime": data_start_time.start_of("week").strftime(DATE_TIME_FORMAT),
+                            "dataEndTime": data_end_time.end_of("week").strftime(DATE_TIME_FORMAT),
+                            "reportOptions": report_options,
+                        }
+                        slc.update(params)
+                        slices.append(slc)
+                        data_start_time = data_end_time.end_of("week")
+                return slices
+
+    def get_updated_state(self, current_stream_state: MutableMapping[str, Any], latest_record: Mapping[str, Any]) -> Mapping[str, Any]:
+        """
+        Return the latest state by comparing the cursor value in the latest record with the stream's most recent state object
+        and returning an updated state object.
+        """
+        latest_benchmark = pendulum.parse(latest_record[self.cursor_field])
+
+        if current_stream_state.get(self.cursor_field):
+            current_bench_mark = pendulum.parse(current_stream_state[self.cursor_field])
+            max_benchmark = max(current_bench_mark, latest_benchmark)
+
+            return {self.cursor_field: max_benchmark.strftime(DATE_TIME_FORMAT)}
+        return {self.cursor_field: latest_benchmark.strftime(DATE_TIME_FORMAT)}
+
+    def _create_report(
+        self,
+        sync_mode: SyncMode,
+        cursor_field: List[str] = None,
+        stream_slice: Mapping[str, Any] = None,
+        stream_state: Mapping[str, Any] = None,
+    ) -> Mapping[str, Any]:
+        print(f"got slice {stream_slice}")
+        request_headers = self.request_headers()
+        create_report_request = self._create_prepared_request(
+            http_method="POST",
+            path=f"{self.path_prefix}/reports",
+            headers=dict(request_headers, **self.authenticator.get_auth_header()),
+            data=json_lib.dumps(stream_slice),
+        )
+        report_response = self._send_request(create_report_request)
+        return report_response.json()[self.data_field]
+
+
 class BrandAnalyticsStream(ReportsAmazonSPStream):
     def parse_document(self, document):
         parsed = json_lib.loads(document)
@@ -489,20 +610,20 @@ class BrandAnalyticsStream(ReportsAmazonSPStream):
             return {}
         else:
             now = pendulum.now("utc")
-            daily_buffer = report_options.pop("daily_buffer_in_hours", 24)
+            report_options.pop("daily_buffer_in_hours", 72)
             if report_options["reportPeriod"] == "DAY":
-                now = now.subtract(hours=daily_buffer)
-                data_start_time = now.start_of("day")
-                data_end_time = now.end_of("day")
+                data_start_time = now.subtract(days=21).start_of("day")
+                data_end_time = now.subtract(days=7).end_of("day")
             elif report_options["reportPeriod"] == "WEEK":
-                now = now.subtract(weeks=1)
+                week_begin = now.subtract(weeks=7)
+                week_end = now.subtract(weeks=1)
                 # According to report api docs
                 # dataStartTime must be a Sunday and dataEndTime must be the following Saturday
                 pendulum.week_starts_at(pendulum.SUNDAY)
                 pendulum.week_ends_at(pendulum.SATURDAY)
 
-                data_start_time = now.start_of("week")
-                data_end_time = now.end_of("week")
+                data_start_time = week_begin.start_of("week")
+                data_end_time = week_end.end_of("week")
 
                 # Reset week start and end
                 pendulum.week_starts_at(pendulum.MONDAY)
@@ -550,14 +671,24 @@ class BrandAnalyticsItemComparisonReports(BrandAnalyticsStream):
     result_key = "dataByAsin"
 
 
-class VendorInventoryReport(BrandAnalyticsStream):
+class VendorInventoryReport(IncrementalReportsStream):
     name = "GET_VENDOR_INVENTORY_REPORT"
     result_key = "inventoryByAsin"
 
 
-class VendorSalesReport(BrandAnalyticsStream):
+class VendorSalesReport(IncrementalReportsStream):
     name = "GET_VENDOR_SALES_REPORT"
     result_key = "salesByAsin"
+
+
+class VendorTrafficReport(IncrementalReportsStream):
+    name = "GET_VENDOR_TRAFFIC_REPORT"
+    result_key = "trafficByAsin"
+
+
+class VendorNetPureProductMarginReport(IncrementalReportsStream):
+    name = "GET_VENDOR_NET_PURE_PRODUCT_MARGIN_REPORT"
+    result_key = "netPureProductMarginByAsin"
 
 
 class IncrementalReportsAmazonSPStream(ReportsAmazonSPStream):
@@ -966,7 +1097,6 @@ class ListFinancialEvents(FinanceStream):
 
 
 class FbaCustomerReturnsReports(ReportsAmazonSPStream):
-
     name = "GET_FBA_FULFILLMENT_CUSTOMER_RETURNS_DATA"
 
     def _report_data(
@@ -987,7 +1117,6 @@ class FbaCustomerReturnsReports(ReportsAmazonSPStream):
 
 
 class FlatFileSettlementV2Reports(ReportsAmazonSPStream):
-
     name = "GET_V2_SETTLEMENT_REPORT_DATA_FLAT_FILE"
 
     def _create_report(

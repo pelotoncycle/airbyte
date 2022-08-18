@@ -1,8 +1,8 @@
 {"streams": [{
   "stream": {
-    "name": "GET_VENDOR_INVENTORY_REPORT",
+    "name": "GET_VENDOR_TRAFFIC_REPORT",
     "json_schema": {},
-    "supported_sync_modes": ["incremental", "full_refresh"]
+    "supported_sync_modes": ["incremental","full_refresh"]
   },
   "sync_mode": "incremental",
   "destination_sync_mode": "append"
