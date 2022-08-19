@@ -31,6 +31,7 @@ from source_greenhouse.streams import (
     JobsStages,
     JobStages,
     Offers,
+    Offices,
     RejectionReasons,
     Scorecards,
     Sources,
@@ -42,7 +43,9 @@ class SourceGreenhouse(AbstractSource):
     def check_connection(self, logger: AirbyteLogger, config: Mapping[str, Any]) -> Tuple[bool, Any]:
         try:
             auth = HTTPBasicAuth(config["api_key"], "")
-            users_gen = Users(authenticator=auth).read_records(sync_mode=SyncMode.full_refresh)
+            users_gen = Users(authenticator=auth, replication_start_date=config["replication_start_date"]).read_records(
+                sync_mode=SyncMode.full_refresh
+            )
             next(users_gen)
             return True, None
         except Exception as error:
@@ -65,6 +68,7 @@ class SourceGreenhouse(AbstractSource):
             JobsOpenings(authenticator=auth),
             JobsStages(authenticator=auth),
             Offers(authenticator=auth, replication_start_date=config["replication_start_date"]),
+            Offices(authenticator=auth),
             RejectionReasons(authenticator=auth),
             Scorecards(authenticator=auth, replication_start_date=config["replication_start_date"]),
             Sources(authenticator=auth),

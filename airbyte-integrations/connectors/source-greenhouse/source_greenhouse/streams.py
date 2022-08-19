@@ -282,6 +282,12 @@ class Offers(IncrementalGreenhouseStream):
     benchmark_field = "updated_at"
 
 
+class Offices(GreenhouseStream):
+    """
+    Docs: https://developers.greenhouse.io/harvest.html#get-list-rejection-reasons
+    """
+
+
 class RejectionReasons(GreenhouseStream):
     """
     Docs: https://developers.greenhouse.io/harvest.html#get-list-rejection-reasons
