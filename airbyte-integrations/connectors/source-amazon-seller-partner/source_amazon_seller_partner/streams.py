@@ -378,7 +378,7 @@ class ReportsAmazonSPStream(Stream, ABC):
             response = self._send_request(request)
             error_response = self.parse_error_response(response)
             logger.error(f"Got error response from REPORTING API: {error_response}")
-            raise Exception(f"The report for stream '{self.name}' was aborted due to a fatal error.")
+            # raise Exception(f"The report for stream '{self.name}' was aborted due to a fatal error.")
         elif is_cancelled:
             logger.warn(f"The report for stream '{self.name}' was cancelled or there is no data to return")
         else:
@@ -491,13 +491,13 @@ class IncrementalReportsStream(ReportsAmazonSPStream):
             replication_start_date = pendulum.parse(self._replication_start_date)
             state_replication_start_date = (
                 pendulum.parse(stream_state.get(self.cursor_field)).add(days=1)
-                if self.cursor_field in stream_state
+                if stream_state and self.cursor_field in stream_state
                 else replication_start_date
             )
             report_options.pop("daily_buffer_in_hours", 72)
             if report_period == "DAY":
                 print(f"report period {report_period}")
-                data_end_time = pendulum.now("utc").subtract(days=3)
+                data_end_time = pendulum.now("utc").subtract(days=1)
                 look_back_limit = data_end_time.subtract(days=1450)
                 data_start_time = max(state_replication_start_date, look_back_limit)
                 slices = []
@@ -513,13 +513,14 @@ class IncrementalReportsStream(ReportsAmazonSPStream):
                         slices.append(slc)
                         data_start_time = data_start_time.add(days=15)
                     else:
-                        slc = {
-                            "dataStartTime": data_start_time.strftime(DATE_TIME_FORMAT),
-                            "dataEndTime": data_end_time.strftime(DATE_TIME_FORMAT),
-                            "reportOptions": report_options,
-                        }
-                        slc.update(params)
-                        slices.append(slc)
+                        for report_date in interval:
+                            slc = {
+                                "dataStartTime": report_date.strftime(DATE_TIME_FORMAT),
+                                "dataEndTime": report_date.strftime(DATE_TIME_FORMAT),
+                                "reportOptions": report_options,
+                            }
+                            slc.update(params)
+                            slices.append(slc)
                         data_start_time = data_end_time
 
                 return slices
