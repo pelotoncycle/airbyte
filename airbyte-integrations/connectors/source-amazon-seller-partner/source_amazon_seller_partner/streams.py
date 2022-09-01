@@ -378,6 +378,7 @@ class ReportsAmazonSPStream(Stream, ABC):
             response = self._send_request(request)
             error_response = self.parse_error_response(response)
             logger.error(f"Got error response from REPORTING API: {error_response}")
+            # ignoring errors to try and get data
             # raise Exception(f"The report for stream '{self.name}' was aborted due to a fatal error.")
         elif is_cancelled:
             logger.warn(f"The report for stream '{self.name}' was cancelled or there is no data to return")
