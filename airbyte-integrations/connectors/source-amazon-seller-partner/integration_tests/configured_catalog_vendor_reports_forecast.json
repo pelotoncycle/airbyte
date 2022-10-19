@@ -1,0 +1,9 @@
+{"streams": [{
+  "stream": {
+    "name": "GET_VENDOR_FORECASTING_REPORT",
+    "json_schema": {},
+    "supported_sync_modes": ["incremental","full_refresh"]
+  },
+  "sync_mode": "full_refresh",
+  "destination_sync_mode": "append"
+}]}

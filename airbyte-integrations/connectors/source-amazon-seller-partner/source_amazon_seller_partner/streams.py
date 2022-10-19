@@ -476,6 +476,7 @@ class IncrementalReportsStream(ReportsAmazonSPStream):
     def stream_slices(
         self, sync_mode: SyncMode, cursor_field: List[str] = None, stream_state: Mapping[str, Any] = None
     ) -> Iterable[Optional[Mapping[str, Any]]]:
+        print(f"got stream state {stream_state}")
         params = {
             "reportType": self.name,
             "marketplaceIds": [self.marketplace_id],
@@ -501,6 +502,8 @@ class IncrementalReportsStream(ReportsAmazonSPStream):
                 data_end_time = pendulum.now("utc").subtract(days=1)
                 look_back_limit = data_end_time.subtract(days=1450)
                 data_start_time = max(state_replication_start_date, look_back_limit)
+                # add a buffer of a day because reports can be updated retroactively
+                data_start_time = data_start_time.subtract(days=1)
                 slices = []
                 while data_start_time < data_end_time:
                     interval = data_end_time - data_start_time
@@ -601,6 +604,7 @@ class BrandAnalyticsStream(ReportsAmazonSPStream):
     ) -> Mapping[str, Any]:
         data = super()._report_data(sync_mode, cursor_field, stream_slice, stream_state)
         options = self.report_options()
+        print(f"got report options: {options} for brand analytics")
         if options is not None:
             data.update(self._augmented_data(options))
 
@@ -671,6 +675,20 @@ class BrandAnalyticsAlternatePurchaseReports(BrandAnalyticsStream):
 class BrandAnalyticsItemComparisonReports(BrandAnalyticsStream):
     name = "GET_BRAND_ANALYTICS_ITEM_COMPARISON_REPORT"
     result_key = "dataByAsin"
+
+
+class VendorForecastReport(BrandAnalyticsStream):
+    name = "GET_VENDOR_FORECASTING_REPORT"
+    result_key = "forecastByAsin"
+
+    def _report_data(
+        self,
+        sync_mode: SyncMode,
+        cursor_field: List[str] = None,
+        stream_slice: Mapping[str, Any] = None,
+        stream_state: Mapping[str, Any] = None,
+    ) -> Mapping[str, Any]:
+        return {"reportType": self.name, "marketplaceIds": [self.marketplace_id], "reportOptions": self.report_options()}
 
 
 class VendorInventoryReport(IncrementalReportsStream):
