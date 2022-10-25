@@ -15,6 +15,7 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.temporal.TemporalUtils;
 import io.airbyte.config.Configs;
 import io.airbyte.config.ReplicationOutput;
+import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.StandardSyncInput;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.metrics.lib.MetricClient;
@@ -39,6 +40,7 @@ import io.airbyte.workers.process.IntegrationLauncher;
 import io.airbyte.workers.process.KubePodProcess;
 import io.airbyte.workers.process.ProcessFactory;
 import io.airbyte.workers.sync.ReplicationLauncherWorker;
+import io.airbyte.persistence.job.ResourceRequirementsUtils;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.Optional;
@@ -86,21 +88,30 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<StandardSyncI
     ApmTraceUtils.addTagsToTrace(Map.of(JOB_ID_KEY, jobRunConfig.getJobId(), DESTINATION_DOCKER_IMAGE_KEY, destinationLauncherConfig.getDockerImage(),
         SOURCE_DOCKER_IMAGE_KEY, sourceLauncherConfig.getDockerImage()));
 
+    final ResourceRequirements defaultRequirements = new ResourceRequirements()
+        .withCpuRequest(configs.getJobMainContainerCpuRequest())
+        .withCpuLimit(configs.getJobMainContainerCpuLimit())
+        .withMemoryRequest(configs.getJobMainContainerMemoryRequest())
+        .withMemoryLimit(configs.getJobMainContainerMemoryLimit());
+
+    final ResourceRequirements sourceRequirements = ResourceRequirementsUtils.getResourceRequirements(syncInput.getSourceResourceRequirements(), defaultRequirements);
+
     log.info("Setting up source launcher...");
     final IntegrationLauncher sourceLauncher = new AirbyteIntegrationLauncher(
         sourceLauncherConfig.getJobId(),
         Math.toIntExact(sourceLauncherConfig.getAttemptId()),
         sourceLauncherConfig.getDockerImage(),
         processFactory,
-        syncInput.getSourceResourceRequirements());
+        sourceRequirements);
 
+    final ResourceRequirements destRequirements = ResourceRequirementsUtils.getResourceRequirements(syncInput.getDestinationResourceRequirements(),defaultRequirements);
     log.info("Setting up destination launcher...");
     final IntegrationLauncher destinationLauncher = new AirbyteIntegrationLauncher(
         destinationLauncherConfig.getJobId(),
         Math.toIntExact(destinationLauncherConfig.getAttemptId()),
         destinationLauncherConfig.getDockerImage(),
         processFactory,
-        syncInput.getDestinationResourceRequirements());
+        destRequirements);
 
     log.info("Setting up source...");
     // reset jobs use an empty source to induce resetting all data in destination.
