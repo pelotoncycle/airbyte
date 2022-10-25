@@ -64,6 +64,7 @@ public class ContainerOrchestratorConfigBeanFactory {
                                                                            final WorkerEnvironment workerEnvironment) {
     final var kubernetesClient = new DefaultKubernetesClient();
 
+
     final DocumentStoreClient documentStoreClient = StateClients.create(
         cloudStateStorageConfiguration.orElse(null),
         STATE_STORAGE_PREFIX);

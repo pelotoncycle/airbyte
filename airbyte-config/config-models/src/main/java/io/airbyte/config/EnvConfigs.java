@@ -107,8 +107,10 @@ public class EnvConfigs implements Configs {
   private static final String CONTAINER_ORCHESTRATOR_SECRET_MOUNT_PATH = "CONTAINER_ORCHESTRATOR_SECRET_MOUNT_PATH";
   private static final String CONTAINER_ORCHESTRATOR_IMAGE = "CONTAINER_ORCHESTRATOR_IMAGE";
   public static final String DD_CONSTANT_TAGS = "DD_CONSTANT_TAGS";
+  public static final String WORKER_LOGS_STORAGE_TYPE = "WORKER_LOGS_STORAGE_TYPE";
+  public static final String WORKER_STATE_STORAGE_TYPE = "WORKER_STATE_STORAGE_TYPE";
   public static final String STATE_STORAGE_S3_BUCKET_NAME = "STATE_STORAGE_S3_BUCKET_NAME";
-  public static final String STATE_STORAGE_S3_REGION = "STATE_STORAGE_S3_REGION";
+  public static final String STATE_STORAGE_S3_REGION = "STATE_STORAGE_S3_BUCKET_REGION";
   public static final String STATE_STORAGE_S3_ACCESS_KEY = "STATE_STORAGE_S3_ACCESS_KEY";
   public static final String STATE_STORAGE_S3_SECRET_ACCESS_KEY = "STATE_STORAGE_S3_SECRET_ACCESS_KEY";
   public static final String STATE_STORAGE_MINIO_BUCKET_NAME = "STATE_STORAGE_MINIO_BUCKET_NAME";
@@ -262,7 +264,7 @@ public class EnvConfigs implements Configs {
       return Optional.of(CloudStorageConfigs.gcs(new GcsConfig(
           getEnvOrDefault(STATE_STORAGE_GCS_BUCKET_NAME, ""),
           getEnvOrDefault(STATE_STORAGE_GCS_APPLICATION_CREDENTIALS, ""))));
-    } else if (getEnv(STATE_STORAGE_MINIO_ENDPOINT) != null) {
+    } else if (getEnv(STATE_STORAGE_MINIO_ENDPOINT) != null && !getEnv(STATE_STORAGE_MINIO_ENDPOINT).isBlank()) {
       return Optional.of(CloudStorageConfigs.minio(new MinioConfig(
           getEnvOrDefault(STATE_STORAGE_MINIO_BUCKET_NAME, ""),
           getEnvOrDefault(STATE_STORAGE_MINIO_ACCESS_KEY, ""),

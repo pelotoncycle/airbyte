@@ -4,6 +4,7 @@
 
 package io.airbyte.workers.config;
 
+
 import io.airbyte.config.storage.CloudStorageConfigs;
 import io.airbyte.config.storage.CloudStorageConfigs.GcsConfig;
 import io.airbyte.config.storage.CloudStorageConfigs.MinioConfig;
@@ -13,6 +14,8 @@ import io.micronaut.context.annotation.Requires;
 import io.micronaut.context.annotation.Value;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Micronaut bean factory for cloud storage-related singletons.
@@ -20,7 +23,7 @@ import jakarta.inject.Singleton;
 @Factory
 @SuppressWarnings("PMD.AvoidDuplicateLiterals")
 public class CloudStorageBeanFactory {
-
+  private static final Logger LOGGER = LoggerFactory.getLogger(CloudStorageBeanFactory.class);
   @Singleton
   @Requires(property = "airbyte.cloud.storage.logs.type",
             pattern = "(?i)^gcs$")
@@ -86,6 +89,8 @@ public class CloudStorageBeanFactory {
                                                          @Value("${airbyte.cloud.storage.state.s3.access-key}") final String awsAccessKey,
                                                          @Value("${airbyte.cloud.storage.state.s3.secret-access-key}") final String secretAcessKey,
                                                          @Value("${airbyte.cloud.storage.state.s3.region}") final String s3Region) {
+    LOGGER.info("got state bucket: " + bucketName );
+    LOGGER.info("got state region: " + s3Region );
     return CloudStorageConfigs.s3(new S3Config(bucketName, awsAccessKey, secretAcessKey, s3Region));
   }
 
