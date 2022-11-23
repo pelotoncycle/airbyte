@@ -108,8 +108,10 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<StandardSyncI
     defaultResourceRequirements.setCpuRequest(configs.getJobMainContainerCpuRequest());
     defaultResourceRequirements.setMemoryLimit(configs.getJobMainContainerMemoryRequest());
     defaultResourceRequirements.setMemoryRequest(configs.getJobMainContainerMemoryRequest());
-    final ResourceRequirements sourceRequirements = ResourceRequirementsUtils.getResourceRequirements(syncInput.getSourceResourceRequirements(), defaultResourceRequirements);
-    final ResourceRequirements destinationRequirements = ResourceRequirementsUtils.getResourceRequirements(syncInput.getDestinationResourceRequirements(), defaultResourceRequirements);
+    final ResourceRequirements sourceRequirements =
+        ResourceRequirementsUtils.getResourceRequirements(syncInput.getSourceResourceRequirements(), defaultResourceRequirements);
+    final ResourceRequirements destinationRequirements =
+        ResourceRequirementsUtils.getResourceRequirements(syncInput.getDestinationResourceRequirements(), defaultResourceRequirements);
     final IntegrationLauncher sourceLauncher = new AirbyteIntegrationLauncher(
         sourceLauncherConfig.getJobId(),
         Math.toIntExact(sourceLauncherConfig.getAttemptId()),
