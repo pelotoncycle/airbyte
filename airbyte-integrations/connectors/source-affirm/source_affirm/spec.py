@@ -12,7 +12,16 @@ class AffirmSettlementReportsConfig(BaseModel):
         title = "Affirm Settlement Reports Spec"
         schema_extra = {"additionalProperties": True}
 
-    auth_type: str = Field(default="oauth2.0", const=True, order=1)
+    user: str = Field(
+        description="User for API authenticator",
+        title="USER"
+    )
+
+    password: str = Field(
+        description="Password for API authenticator",
+        title="PASSWORD",
+        airbyte_secret=True
+    )
 
     start_date: str = Field(
         description="date in the format 2015-01-01. Any data before this date will not be replicated.",
@@ -41,12 +50,17 @@ class AffirmSettlementReportsConfig(BaseModel):
     merchant_type: AffirmMerchantType = Field(
         description="Select e-commerce or in-store", title="Merchant Type", examples=["e-commerce", "in-store"]
     )
-    report_type: AffirmSettlementReportType = Field(
-        description="Select details or summary", title="Report Type", examples=["details", "summary"]
+    merchant_id: str = Field(
+        description="Merchant ID", title="Merchant ID"
     )
     lookback_window_days: int = Field(
         description="When set, the connector will always re-export data from the past N days",
         title="Lookback Window in Days",
         default=3
+    )
+    api_page_limit: int = Field(
+        description="page limit for API calls",
+        title="Page Limit",
+        default=200
     )
 

@@ -7,12 +7,15 @@ from abc import ABC
 from typing import Any, Iterable, List, Mapping, MutableMapping, Optional, Tuple
 
 import requests
-from airbyte_cdk.models import ConnectorSpecification
+from requests.auth import HTTPBasicAuth
+from airbyte_cdk.models import ConnectorSpecification, SyncMode
 from airbyte_cdk.sources import AbstractSource
 from airbyte_cdk.sources.streams import Stream
 from airbyte_cdk.sources.streams.http import HttpStream
 from airbyte_cdk.sources.streams.http.auth import TokenAuthenticator
 from .spec import AffirmSettlementReportsConfig
+from .streams import AffirmSettlementSummaryStream, AffirmSettlementEventsStream
+import traceback
 
 """
 TODO: Most comments in this class are instructive and should be deleted after the source is implemented.
@@ -136,8 +139,38 @@ class SourceAffirm(AbstractSource):
         :param logger:  logger object
         :return Tuple[bool, any]: (True, None) if the input config can be used to connect to the API successfully, (False, error) otherwise.
         """
+        stream_kwargs = self.get_stream_kwargs(config)
+        stream_kwargs['page_limit'] = 1
+        stream_kwargs['start_date'] = '2023-01-01'
+        stream_kwargs['end_date'] = '2023-01-10'
+        try:
+            affirm_events_stream = AffirmSettlementSummaryStream(**stream_kwargs)
+            generator = affirm_events_stream.read_records(sync_mode=SyncMode.full_refresh)
+            next(iter(generator))
 
-        return True, None
+            return True, None
+        except Exception as e:
+            if isinstance(e, StopIteration):
+                logger.error(
+                    "Could not check connection without data for chosen date. Please change value for replication start date field."
+                )
+
+            return False, e
+
+    @staticmethod
+    def get_stream_kwargs(config: Mapping[str, Any]) -> Mapping[str, Any]:
+        user = config.get("user")
+        password = config.get("password")
+        stream_kwargs = dict()
+        stream_kwargs["authenticator"] = HTTPBasicAuth(user, password)
+        return {
+            **stream_kwargs,
+            "country": config.get("affirm_country"),
+            "merchant_id": config.get("merchant_id"),
+            "page_limit": config.get("api_page_limit"),
+            "start_date": config.get("start_date"),
+            "end_date": config.get("end_date", None)
+        }
 
     def streams(self, config: Mapping[str, Any]) -> List[Stream]:
         """
@@ -146,8 +179,11 @@ class SourceAffirm(AbstractSource):
         :param config: A Mapping of the user input configuration as defined in the connector spec.
         """
         # TODO remove the authenticator if not required.
-        auth = TokenAuthenticator(token="api_key")  # Oauth2Authenticator is also available if you need oauth support
-        return [Customers(authenticator=auth), Employees(authenticator=auth)]
+        stream_kwargs = self.get_stream_kwargs(config)
+        return [
+            AffirmSettlementEventsStream(**stream_kwargs),
+            AffirmSettlementSummaryStream(**stream_kwargs)
+        ]
 
     def spec(self, *args, **kwargs) -> ConnectorSpecification:
         """
@@ -156,9 +192,6 @@ class SourceAffirm(AbstractSource):
         """
         # FIXME: airbyte-cdk does not parse pydantic $ref correctly. This override won't be needed after the fix
         schema = AffirmSettlementReportsConfig.schema()
-        # schema["properties"]["country"] = schema["definitions"]["AffirmCountry"]
-        # schema["properties"]["merchant_type"] = schema["definitions"]["AffirmMerchantType"]
-        # schema["properties"]["report_type"] = schema["definitions"]["AffirmSettlementReportType"]
         return ConnectorSpecification(
             documentationUrl="https://docs.airbyte.io/integrations/sources/affirm",
             changelogUrl="https://docs.airbyte.io/integrations/sources/affirm",
