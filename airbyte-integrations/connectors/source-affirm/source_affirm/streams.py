@@ -3,6 +3,7 @@ import urllib.parse
 
 import requests
 from airbyte_cdk.sources.streams.http.http import HttpStream
+from airbyte_cdk.sources.streams import IncrementalMixin
 from airbyte_cdk.logger import AirbyteLogger
 from airbyte_cdk.models import SyncMode
 from airbyte_cdk.sources.streams.core import Stream, StreamData
@@ -14,17 +15,17 @@ from source_affirm.constants import AffirmCountry
 logger = AirbyteLogger()
 
 
-class SourceAffirmStream(HttpStream):
+class SourceAffirmStream(HttpStream, IncrementalMixin):
     primary_key = 'id'
     cursor_field = "date"
 
     def __init__(self, country, merchant_id, page_limit, start_date, end_date, **kwargs):
-        self.affirm_country: str = country
+        self.affirm_country: AffirmCountry = country
         self.merchant_id: str = merchant_id
         self.api_page_limit: int = page_limit
         self.start_date: str = start_date
-        self.end_date: str = end_date
-        self._cursor_value: datetime = None
+        self.end_date: Optional[str] = end_date
+        self._cursor_value: Optional[datetime] = None
         super(SourceAffirmStream, self).__init__(**kwargs)
 
     @property
@@ -45,7 +46,10 @@ class SourceAffirmStream(HttpStream):
         The return value is a list of dicts {'date': date_string}.
         """
         dates = []
-        while start_date <= datetime.now():
+        today = datetime.now()
+        end_date = today if not self.end_date else min(today, datetime.strptime(self.end_date, '%Y-%m-%d'))
+
+        while start_date <= end_date:
             dates.append({self.cursor_field: start_date.strftime('%Y-%m-%d')})
             start_date += timedelta(days=1)
         return dates
@@ -66,6 +70,13 @@ class SourceAffirmStream(HttpStream):
             AffirmCountry.AU: "https://au.affirm.com/api/v1/"
         }
         return base_urls[self.affirm_country]
+
+    def read_records(self, *args, **kwargs) -> Iterable[Mapping[str, Any]]:
+        for record in super().read_records(*args, **kwargs):
+            if self._cursor_value:
+                latest_record_date = datetime.strptime(record[self.cursor_field], '%Y-%m-%d')
+                next_cursor = max(self._cursor_value, latest_record_date)
+            yield record
 
     def parse_response(
         self,
