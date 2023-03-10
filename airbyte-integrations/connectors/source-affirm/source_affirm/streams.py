@@ -77,7 +77,8 @@ class SourceAffirmStream(HttpStream, IncrementalMixin):
             stream_slice: Mapping[str, Any] = None,
             stream_state: Mapping[str, Any] = None,
     ) -> Iterable[StreamData]:
-        self._cursor_value = datetime.strptime(stream_slice[self.cursor_field], '%Y-%m-%d')
+        if stream_slice:
+            self._cursor_value = datetime.strptime(stream_slice[self.cursor_field], '%Y-%m-%d')
         yield from super().read_records(sync_mode, cursor_field, stream_slice, stream_state)
 
     def parse_response(

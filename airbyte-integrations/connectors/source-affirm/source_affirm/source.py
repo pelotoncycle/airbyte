@@ -1,8 +1,6 @@
 #
 # Copyright (c) 2022 Airbyte, Inc., all rights reserved.
 #
-
-
 from abc import ABC
 from typing import Any, Iterable, List, Mapping, MutableMapping, Optional, Tuple
 
@@ -143,7 +141,7 @@ class SourceAffirm(AbstractSource):
         stream_kwargs['start_date'] = '2023-01-01'
         stream_kwargs['end_date'] = '2023-01-10'
         try:
-            affirm_events_stream = AffirmSettlementSummaryStream(**stream_kwargs)
+            affirm_events_stream = AffirmSettlementEventsStream(**stream_kwargs)
             generator = affirm_events_stream.read_records(sync_mode=SyncMode.full_refresh)
             next(iter(generator))
 
