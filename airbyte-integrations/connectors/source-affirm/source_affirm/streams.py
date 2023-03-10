@@ -1,16 +1,15 @@
-from typing import Mapping, Any, Optional, Iterable, MutableMapping, List, Tuple, Callable
 import urllib.parse
+from datetime import datetime, timedelta, date
+from typing import Mapping, Any, Optional, Iterable, MutableMapping, List
 
 import requests
-from airbyte_cdk.sources.streams.http.http import HttpStream
-from airbyte_cdk.sources.streams import IncrementalMixin
 from airbyte_cdk.logger import AirbyteLogger
 from airbyte_cdk.models import SyncMode
-from airbyte_cdk.sources.streams.core import Stream, StreamData
-from datetime import datetime, timedelta
+from airbyte_cdk.sources.streams import IncrementalMixin
+from airbyte_cdk.sources.streams.core import StreamData
+from airbyte_cdk.sources.streams.http.http import HttpStream
 
 from source_affirm.constants import AffirmCountry
-
 
 logger = AirbyteLogger()
 
@@ -46,10 +45,10 @@ class SourceAffirmStream(HttpStream, IncrementalMixin):
         The return value is a list of dicts {'date': date_string}.
         """
         dates = []
-        today = datetime.now()
+        today = datetime.combine(date.today(), datetime.min.time())     # today mid night
         end_date = today if not self.end_date else min(today, datetime.strptime(self.end_date, '%Y-%m-%d'))
 
-        while start_date <= end_date:
+        while start_date < end_date:
             dates.append({self.cursor_field: start_date.strftime('%Y-%m-%d')})
             start_date += timedelta(days=1)
         return dates
@@ -71,20 +70,23 @@ class SourceAffirmStream(HttpStream, IncrementalMixin):
         }
         return base_urls[self.affirm_country]
 
-    def read_records(self, *args, **kwargs) -> Iterable[Mapping[str, Any]]:
-        for record in super().read_records(*args, **kwargs):
-            if self._cursor_value:
-                latest_record_date = datetime.strptime(record[self.cursor_field], '%Y-%m-%d')
-                next_cursor = max(self._cursor_value, latest_record_date)
-            yield record
+    def read_records(
+            self,
+            sync_mode: SyncMode,
+            cursor_field: List[str] = None,
+            stream_slice: Mapping[str, Any] = None,
+            stream_state: Mapping[str, Any] = None,
+    ) -> Iterable[StreamData]:
+        self._cursor_value = datetime.strptime(stream_slice[self.cursor_field], '%Y-%m-%d')
+        yield from super().read_records(sync_mode, cursor_field, stream_slice, stream_state)
 
     def parse_response(
-        self,
-        response: requests.Response,
-        *,
-        stream_state: Mapping[str, Any],
-        stream_slice: Mapping[str, Any] = None,
-        next_page_token: Mapping[str, Any] = None,
+            self,
+            response: requests.Response,
+            *,
+            stream_state: Mapping[str, Any],
+            stream_slice: Mapping[str, Any] = None,
+            next_page_token: Mapping[str, Any] = None,
     ) -> Iterable[Mapping]:
         response_json = response.json()
         try:
@@ -94,10 +96,10 @@ class SourceAffirmStream(HttpStream, IncrementalMixin):
             yield from []
 
     def request_params(
-        self,
-        stream_state: Mapping[str, Any],
-        stream_slice: Mapping[str, Any] = None,
-        next_page_token: Mapping[str, Any] = None,
+            self,
+            stream_state: Mapping[str, Any],
+            stream_slice: Mapping[str, Any] = None,
+            next_page_token: Mapping[str, Any] = None,
     ) -> MutableMapping[str, Any]:
         if next_page_token:
             return next_page_token
@@ -116,7 +118,7 @@ class SourceAffirmStream(HttpStream, IncrementalMixin):
         }
 
     def request_headers(
-        self, stream_state: Mapping[str, Any], stream_slice: Mapping[str, Any] = None, next_page_token: Mapping[str, Any] = None
+            self, stream_state: Mapping[str, Any], stream_slice: Mapping[str, Any] = None, next_page_token: Mapping[str, Any] = None
     ) -> Mapping[str, Any]:
         return {"accept": "*/*"}
 
@@ -134,11 +136,11 @@ class AffirmSettlementEventsStream(SourceAffirmStream):
     name = 'events'
 
     def path(
-        self,
-        *,
-        stream_state: Mapping[str, Any] = None,
-        stream_slice: Mapping[str, Any] = None,
-        next_page_token: Mapping[str, Any] = None,
+            self,
+            *,
+            stream_state: Mapping[str, Any] = None,
+            stream_slice: Mapping[str, Any] = None,
+            next_page_token: Mapping[str, Any] = None,
     ) -> str:
         return 'settlements/events'
 
@@ -147,10 +149,10 @@ class AffirmSettlementSummaryStream(SourceAffirmStream):
     name = 'summary'
 
     def path(
-        self,
-        *,
-        stream_state: Mapping[str, Any] = None,
-        stream_slice: Mapping[str, Any] = None,
-        next_page_token: Mapping[str, Any] = None,
+            self,
+            *,
+            stream_state: Mapping[str, Any] = None,
+            stream_slice: Mapping[str, Any] = None,
+            next_page_token: Mapping[str, Any] = None,
     ) -> str:
         return 'settlements/daily'

@@ -7,15 +7,14 @@ from abc import ABC
 from typing import Any, Iterable, List, Mapping, MutableMapping, Optional, Tuple
 
 import requests
-from requests.auth import HTTPBasicAuth
 from airbyte_cdk.models import ConnectorSpecification, SyncMode
 from airbyte_cdk.sources import AbstractSource
 from airbyte_cdk.sources.streams import Stream
 from airbyte_cdk.sources.streams.http import HttpStream
-from airbyte_cdk.sources.streams.http.auth import TokenAuthenticator
+from requests.auth import HTTPBasicAuth
+
 from .spec import AffirmSettlementReportsConfig
 from .streams import AffirmSettlementSummaryStream, AffirmSettlementEventsStream
-import traceback
 
 """
 TODO: Most comments in this class are instructive and should be deleted after the source is implemented.

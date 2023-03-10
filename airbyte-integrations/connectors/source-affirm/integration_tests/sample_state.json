@@ -1,5 +1,8 @@
 {
-  "todo-stream-name": {
-    "todo-field-name": "value"
+  "events": {
+    "date": "2023-03-07"
+  },
+  "summary": {
+    "date": "2023-03-06"
   }
 }

@@ -2,9 +2,9 @@
 # Copyright (c) 2022 Airbyte, Inc., all rights reserved.
 #
 
-from airbyte_cdk.models import AdvancedAuth, AuthFlowType, OAuthConfigSpecification
 from pydantic import BaseModel, Field
-from .constants import AffirmCountry, AffirmMerchantType, AffirmSettlementReportType
+
+from .constants import AffirmCountry, AffirmMerchantType
 
 
 class AffirmSettlementReportsConfig(BaseModel):
@@ -63,4 +63,3 @@ class AffirmSettlementReportsConfig(BaseModel):
         title="Page Limit",
         default=200
     )
-
