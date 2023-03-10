@@ -4,8 +4,6 @@
 
 from pydantic import BaseModel, Field
 
-from .constants import AffirmCountry, AffirmMerchantType
-
 
 class AffirmSettlementReportsConfig(BaseModel):
     class Config:
@@ -45,10 +43,10 @@ class AffirmSettlementReportsConfig(BaseModel):
         examples=["30", "365"],
     )
 
-    affirm_country: AffirmCountry = Field(
-        description="Select country of settlement reports.", title="Country", examples=["US", "CA", "AU"]
+    affirm_country: str = Field(
+        description="Select country of settlement reports.", title="Country", examples=["US", "CA"]
     )
-    merchant_type: AffirmMerchantType = Field(
+    merchant_type: str = Field(
         description="Select e-commerce or in-store", title="Merchant Type", examples=["e-commerce", "in-store"]
     )
     merchant_id: str = Field(

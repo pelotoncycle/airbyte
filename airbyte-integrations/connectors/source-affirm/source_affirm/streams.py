@@ -9,8 +9,6 @@ from airbyte_cdk.sources.streams import IncrementalMixin
 from airbyte_cdk.sources.streams.core import StreamData
 from airbyte_cdk.sources.streams.http.http import HttpStream
 
-from source_affirm.constants import AffirmCountry
-
 logger = AirbyteLogger()
 
 
@@ -19,7 +17,7 @@ class SourceAffirmStream(HttpStream, IncrementalMixin):
     cursor_field = "date"
 
     def __init__(self, country, merchant_id, page_limit, start_date, end_date, **kwargs):
-        self.affirm_country: AffirmCountry = country
+        self.affirm_country: str = country
         self.merchant_id: str = merchant_id
         self.api_page_limit: int = page_limit
         self.start_date: str = start_date
@@ -64,9 +62,8 @@ class SourceAffirmStream(HttpStream, IncrementalMixin):
     @property
     def url_base(self) -> str:
         base_urls = {
-            AffirmCountry.US: "https://api.affirm.com/api/v1/",
-            AffirmCountry.CA: "https://api.affirm.ca/api/v1/",
-            AffirmCountry.AU: "https://au.affirm.com/api/v1/"
+            "US": "https://api.affirm.com/api/v1/",
+            "CA": "https://api.affirm.ca/api/v1/"
         }
         return base_urls[self.affirm_country]
 
