@@ -14,7 +14,8 @@ class AffirmSettlementReportsConfig(BaseModel):
 
     user: str = Field(
         description="User for API authenticator",
-        title="USER"
+        title="USER",
+        airbyte_secret=True
     )
 
     password: str = Field(
@@ -40,7 +41,7 @@ class AffirmSettlementReportsConfig(BaseModel):
 
     period_in_days: int = Field(
         30,
-        description="Will be used for stream slicing for initial full_refresh sync when no updated state is present for reports that support sliced incremental sync.",
+        description="Not used in current version. Reserved for future enhancements. Will be used for stream slicing for initial full_refresh sync when no updated state is present for reports that support sliced incremental sync.",
         examples=["30", "365"],
     )
 
@@ -51,10 +52,10 @@ class AffirmSettlementReportsConfig(BaseModel):
         description="Select e-commerce or in-store", title="Merchant Type", examples=["e-commerce", "in-store"]
     )
     merchant_id: str = Field(
-        description="Merchant ID", title="Merchant ID"
+        description="Merchant ID", title="Merchant ID", airbyte_secret=True
     )
-    lookback_window_days: int = Field(
-        description="When set, the connector will always re-export data from the past N days",
+    look_back_window_days: int = Field(
+        description="Not used in current version. Reserved for future enhancements. When set, the connector will always re-export data from the past N days",
         title="Lookback Window in Days",
         default=3
     )
