@@ -46,7 +46,7 @@ class SourceAffirmStream(HttpStream, IncrementalMixin):
         today = datetime.combine(date.today(), datetime.min.time())     # today mid night
         end_date = today if not self.end_date else min(today, datetime.strptime(self.end_date, '%Y-%m-%d'))
 
-        while start_date < end_date:
+        while start_date <= end_date:
             dates.append({self.cursor_field: start_date.strftime('%Y-%m-%d')})
             start_date += timedelta(days=1)
         return dates
@@ -146,6 +146,10 @@ class AffirmSettlementEventsStream(SourceAffirmStream):
 class AffirmSettlementSummaryStream(SourceAffirmStream):
     name = 'summary'
 
+    def __init__(self, summary_lookback_window, **kwargs):
+        self.summary_lookback_window = summary_lookback_window
+        super(AffirmSettlementSummaryStream, self).__init__(**kwargs)
+
     def path(
             self,
             *,
@@ -154,3 +158,13 @@ class AffirmSettlementSummaryStream(SourceAffirmStream):
             next_page_token: Mapping[str, Any] = None,
     ) -> str:
         return 'settlements/daily'
+
+    def stream_slices(self, sync_mode, cursor_field: List[str] = None, stream_state: Mapping[str, str] = None) -> Iterable[Optional[Mapping[str, Any]]]:
+        conf_start_date_dt = datetime.strptime(self.start_date, '%Y-%m-%d')
+        if stream_state and self.cursor_field in stream_state:
+            maybe_start_date_str = stream_state.get(self.cursor_field)
+            maybe_start_date_dt = datetime.strptime(maybe_start_date_str, '%Y-%m-%d')
+            start_date_dt = max(maybe_start_date_dt - timedelta(days=self.summary_lookback_window), conf_start_date_dt)
+        else:
+            start_date_dt = conf_start_date_dt
+        return self._chunk_date_range(start_date_dt)

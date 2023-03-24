@@ -166,7 +166,8 @@ class SourceAffirm(AbstractSource):
             "merchant_id": config.get("merchant_id"),
             "page_limit": config.get("api_page_limit"),
             "start_date": config.get("start_date"),
-            "end_date": config.get("end_date", None)
+            "end_date": config.get("end_date", None),
+            "summary_lookback_window": config.get("summary_lookback_window_days")
         }
 
     def streams(self, config: Mapping[str, Any]) -> List[Stream]:
@@ -177,9 +178,12 @@ class SourceAffirm(AbstractSource):
         """
         # TODO remove the authenticator if not required.
         stream_kwargs = self.get_stream_kwargs(config)
+        summary_stream_kwargs = stream_kwargs.copy()
+        event_stream_kwargs = stream_kwargs.copy()
+        event_stream_kwargs.pop("summary_lookback_window")
         return [
-            AffirmSettlementEventsStream(**stream_kwargs),
-            AffirmSettlementSummaryStream(**stream_kwargs)
+            AffirmSettlementEventsStream(**event_stream_kwargs),
+            AffirmSettlementSummaryStream(**summary_stream_kwargs)
         ]
 
     def spec(self, *args, **kwargs) -> ConnectorSpecification:

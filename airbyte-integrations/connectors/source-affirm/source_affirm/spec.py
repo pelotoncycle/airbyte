@@ -52,10 +52,10 @@ class AffirmSettlementReportsConfig(BaseModel):
     merchant_id: str = Field(
         description="Merchant ID", title="Merchant ID", airbyte_secret=True
     )
-    look_back_window_days: int = Field(
-        description="Not used in current version. Reserved for future enhancements. When set, the connector will always re-export data from the past N days",
-        title="Lookback Window in Days",
-        default=3
+    summary_lookback_window_days: int = Field(
+        description="Lookback window for summary stream. Data from the lookback window will be replicated everytime the sync runs",
+        title="Lookback Window in Days for Summary",
+        default=30
     )
     api_page_limit: int = Field(
         description="page limit for API calls",
