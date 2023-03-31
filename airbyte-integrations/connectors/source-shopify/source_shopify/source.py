@@ -4,6 +4,7 @@
 
 
 from abc import ABC, abstractmethod
+from datetime import datetime
 from typing import Any, Dict, Iterable, List, Mapping, MutableMapping, Optional, Tuple, Union
 from urllib.parse import parse_qsl, urlparse
 
@@ -29,7 +30,8 @@ class ShopifyStream(HttpStream, ABC):
     # Define primary key as sort key for full_refresh, or very first sync for incremental_refresh
     primary_key = "id"
     order_field = "updated_at"
-    filter_field = "updated_at_min"
+    filter_field_start = "updated_at_min"
+    filter_field_end = "updated_at_max"
 
     raise_on_http_errors = True
 
@@ -43,11 +45,18 @@ class ShopifyStream(HttpStream, ABC):
         return f"https://{self.config['shop']}.myshopify.com/admin/api/{self.api_version}/"
 
     @property
-    def default_filter_field_value(self) -> Union[int, str]:
+    def default_filter_field_value(self) -> Union[Tuple[int, int], Tuple[str, str]]:
         # certain streams are using `since_id` field as `filter_field`, which requires to use `int` type,
         # but many other use `str` values for this, we determine what to use based on `filter_field` value
         # by default, we use the user defined `Start Date` as initial value, or 0 for `id`-dependent streams.
-        return 0 if self.filter_field == "since_id" else self.config["start_date"]
+        today = datetime.today()
+        # end_date = min(today, self.config.get('end_date', today))
+        end_date_str = datetime.strftime(today, '%Y-%m-%d')
+        if self.filter_field_start == 'since_id':
+            return 0, 0
+        elif self.filter_field_start and self.filter_field_end:
+            return self.config["start_date"], end_date_str
+        # return 0 if self.filter_field_start == "since_id" else self.config["start_date"]
 
     @staticmethod
     def next_page_token(response: requests.Response) -> Optional[Mapping[str, Any]]:
@@ -63,7 +72,15 @@ class ShopifyStream(HttpStream, ABC):
             params.update(**next_page_token)
         else:
             params["order"] = f"{self.order_field} asc"
-            params[self.filter_field] = self.default_filter_field_value
+            start, end = self.default_filter_field_value
+            params[self.filter_field_start] = start
+            if end:
+                if not self.config.get('end_date'):
+                    end_date = datetime.today().date()
+                else:
+                    end_date = datetime.strptime(self.config.get('end_date'), '%Y-%m-%d').date()
+                end_date_str = datetime.strftime(end_date, '%Y-%m-%d')
+                params[self.filter_field_end] = min(end, end_date_str)
         return params
 
     @limiter.balance_rate_limit()
@@ -130,8 +147,26 @@ class IncrementalShopifyStream(ShopifyStream, ABC):
         if not next_page_token:
             params["order"] = f"{self.order_field} asc"
             if stream_state:
-                params[self.filter_field] = stream_state.get(self.cursor_field)
+                params[self.filter_field_start] = stream_state.get(self.cursor_field)
         return params
+
+    def _fetch_next_page(
+        self, stream_slice: Mapping[str, Any] = None, stream_state: Mapping[str, Any] = None, next_page_token: Mapping[str, Any] = None
+    ) -> Tuple[requests.PreparedRequest, requests.Response]:
+        request_headers = self.request_headers(stream_state=stream_state, stream_slice=stream_slice, next_page_token=next_page_token)
+        request = self._create_prepared_request(
+            path=self.path(stream_state=stream_state, stream_slice=stream_slice, next_page_token=next_page_token),
+            headers=dict(request_headers, **self.authenticator.get_auth_header()),
+            params=self.request_params(stream_state=stream_state, stream_slice=stream_slice, next_page_token=next_page_token),
+            json=self.request_body_json(stream_state=stream_state, stream_slice=stream_slice, next_page_token=next_page_token),
+            data=self.request_body_data(stream_state=stream_state, stream_slice=stream_slice, next_page_token=next_page_token),
+        )
+        self.logger.info(request)
+        request_kwargs = self.request_kwargs(stream_state=stream_state, stream_slice=stream_slice, next_page_token=next_page_token)
+        self.logger.info(request_kwargs)
+
+        response = self._send_request(request, request_kwargs)
+        return request, response
 
     # Parse the `stream_slice` with respect to `stream_state` for `Incremental refresh`
     # cases where we slice the stream, the endpoints for those classes don't accept any other filtering,
@@ -407,13 +442,13 @@ class ProductsGraphQl(IncrementalShopifyStream):
         stream_slice: Optional[Mapping[str, Any]] = None,
         next_page_token: Optional[Mapping[str, Any]] = None,
     ) -> Optional[Mapping]:
-        state_value = stream_state.get(self.filter_field)
+        state_value = stream_state.get(self.filter_field_start)
         if state_value:
             filter_value = state_value
         else:
             filter_value = self.default_filter_field_value
         query = get_query_products(
-            first=self.limit, filter_field=self.filter_field, filter_value=filter_value, next_page_token=next_page_token
+            first=self.limit, filter_field=self.filter_field_start, filter_value=filter_value, next_page_token=next_page_token
         )
         return {"query": query}
 
