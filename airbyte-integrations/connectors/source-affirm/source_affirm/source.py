@@ -140,6 +140,7 @@ class SourceAffirm(AbstractSource):
         stream_kwargs['page_limit'] = 1
         stream_kwargs['start_date'] = '2023-01-01'
         stream_kwargs['end_date'] = '2023-01-10'
+        stream_kwargs.pop("summary_lookback_window")
         try:
             affirm_events_stream = AffirmSettlementEventsStream(**stream_kwargs)
             generator = affirm_events_stream.read_records(sync_mode=SyncMode.full_refresh)
