@@ -2,7 +2,7 @@
   "name": "airbyte-webapp",
   "private": true,
   "dependencies": {
-    "firebase": "^8.8.0"
+    "firebase": "^10.2.0"
   },
   "browserslist": {
     "production": [
