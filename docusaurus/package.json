@@ -116,7 +116,7 @@
     "react-router": "5.3.3",
     "sockjs": "0.3.24",
     "trim": "0.0.3",
-    "webpack-dev-server": "4.9.2"
+    "webpack-dev-server": "5.0.0"
   },
   "browserslist": {
     "production": [
