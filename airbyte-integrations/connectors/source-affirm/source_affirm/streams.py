@@ -99,6 +99,8 @@ class SourceAffirmStream(HttpStream, IncrementalMixin):
             stream_slice: Mapping[str, Any] = None,
             next_page_token: Mapping[str, Any] = None,
     ) -> MutableMapping[str, Any]:
+        logger.info(f"page limit is set to: {self.api_page_limit}")
+        logger.info(f"cursor field is: {self.cursor_field}")
         if next_page_token:
             return next_page_token
         if stream_slice:
